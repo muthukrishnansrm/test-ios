@@ -1,0 +1,4 @@
+name = Eureka Ajax
+description = Simple Ajax example in Drupal 7 by ykyuen
+core = 7.x
+package = Eureka

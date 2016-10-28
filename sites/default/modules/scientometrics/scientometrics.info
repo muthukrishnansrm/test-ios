@@ -1,0 +1,5 @@
+;$Id$
+name = Scientometrics
+description = Scientometrics Visualisation
+package = Custom Module
+core = 7.x

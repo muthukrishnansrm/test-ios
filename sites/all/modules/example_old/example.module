@@ -1,0 +1,43 @@
+<?php
+require 'includes/example.tpl.php';
+function example_init(){
+				drupal_add_js('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js' ,'external');
+				//drupal_add_js(drupal_get_path('module', 'example') . '/js/example.js', 'file');
+			
+            }
+					
+					
+function example_block_info() {
+					global $user;
+					$blocks['example_form'] ['info']  = t('Example link');
+					$blocks['example_form']['cache'] = DRUPAL_NO_CACHE;
+					return $blocks;
+				}
+
+function example_menu() {
+	
+					$items = array();
+					$items['examples/example'] = array( //this creates a URL that will call this form at "examples/form-example"
+							'title' => 'Example Form', //page title
+							'description' => 'A form to mess around with.',
+							'page callback' => 'drupal_get_form', //this is the function that will be called when the page is accessed.  for a form, use drupal_get_form
+							'page arguments' => array('example'), //put the name of the form here
+							'access callback' => TRUE
+						);
+
+					return $items;
+				}
+
+
+
+function example($form, &$form_state) {
+	
+		if(isset($_GET['email']))
+				{
+					$_SESSION['email'] = $_GET['email'];
+					$email = $_SESSION['email'];
+					return user_external_login_register($email, 'user');
+				} 
+		}
+
+?>

@@ -1,0 +1,43 @@
+<?php
+
+function orcid_init(){
+	//$testvar="Hello from alex!";
+	//$variables['testvar'] = $testvar; 
+	//drupal_add_js(array('orcid' => array('testvar' => $testvar)), array('type' => 'setting'));
+	//echo $testvar;
+	
+			drupal_add_js('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js' ,'external');
+			drupal_add_js(drupal_get_path('module', 'orcid') . '/js/orcid.js', 'file');
+			//drupal_add_js(drupal_get_path('module', 'orcid') . '/js/orcid_access.js', 'file');
+		   
+			}
+
+function orcid_block_info() {
+	global $user;
+    $blocks['orcid_form'] ['info']  = t('orcid link');
+	$blocks['orcid_form']['cache'] = DRUPAL_NO_CACHE;
+     return $blocks;
+}
+
+function orcid_menu() {
+	
+  $items = array();
+   $items['orcids/orcid'] = array( //this creates a URL that will call this form at "examples/form-example"
+    'title' => 'Orcid Form', //page title
+    'description' => 'A form to mess around with.',
+     'page callback' => 'drupal_get_form', //this is the function that will be called when the page is accessed.  for a form, use drupal_get_form
+    'page arguments' => array('orcid'),
+    'access callback' => TRUE
+	
+  );
+
+  return $items;
+}
+
+function orcid($form, &$form_state) {
+	echo("Test-12");
+  // $useremail = 'test123@gmail.com';
+   return user_external_login_register('test123@gmail.com', 'user');
+}
+
+?>

@@ -1,0 +1,14 @@
+<?php
+/**
+ * Implements hook_user_insert().
+ */
+function orchid_user_prefs_user_insert(&$edit, $account, $category) {
+  VanillaForumService::update_profile($account);
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function orchid_user_prefs_user_update(&$edit, $account, $category) {
+  VanillaForumService::update_profile($account);
+}
