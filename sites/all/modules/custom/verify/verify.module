@@ -1,0 +1,269 @@
+<?php
+
+module_load_include('module', 'reviewer_select', 'reviewer_select');
+function verify_menu() {
+	$items['swj/verify'] = array(
+		'title' => t('Confirm request'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('verify_form'),
+		'access callback' => 'verify_callback',
+		'type' => MENU_CALLBACK
+	);
+
+	return $items;
+}
+
+function verify_callback() {
+	global $user;
+
+	// if user is logged in
+	if ($user -> uid != arg(4))
+		return false;
+
+	// if user is a reviewer for the specified node
+	$nbr_records = db_query("SELECT count(nid) FROM {paper_reviewer} where nid = :nid and vid = :vid and ruid = :ruid and accept =0", array(
+		':nid' => arg(2),
+		':vid' => arg(3),
+		':ruid' => arg(4)
+	)) -> fetchField();
+	if ($nbr_records == 0)
+		return false;
+
+	return true;
+}
+
+function verify_form($form, &$form_state, $nd = null, $vd = null, $ruid = null) {
+	drupal_add_js(drupal_get_path('module', 'verify') . '/verify.js');
+	$form['status'] = array(
+		'#title' => t('Status'),
+		'#type' => 'radios',
+		'#maxlength' => 1,
+		'#description' => t(''),
+		'#options' => array(
+			1 => t('Yes, I agree to review this paper'),
+			0 => t('No, I can\'t review this paper at this time')
+		),
+		'#required' => true
+	);
+	$form['reason'] = array(
+		'#type' => 'textarea',
+		'#title' => t('Please provide a reason:'),
+		'#description' => t('Please provide us the reason, we will appreciate if you could suggest us a few reviewers for this paper.'),
+		'#required' => false,
+	);
+	$form['nd'] = array(
+		'#type' => 'hidden',
+		'#value' => $nd,
+	);
+	$form['vd'] = array(
+		'#type' => 'hidden',
+		'#value' => $vd,
+	);
+	$form['ruid'] = array(
+		'#type' => 'hidden',
+		'#value' => $ruid,
+	);
+	$form['submit'] = array(
+		'#title' => 'Submit',
+		'#type' => 'submit',
+		'#value' => t('Submit')
+	);
+
+	return $form;
+}
+
+function verify_form_submit($form, &$form_state) {
+	module_load_include('module', 'testaction', 'testaction');
+
+	// grab eic users from db
+	$eic = EIC_ROLE;
+        //watchdog('to be removed', 'before fetching users');
+	$result = db_query("Select u.uid from users_roles u INNER JOIN role r on u.rid = r.rid where r.name='" . $eic . "'");
+	//watchdog('to be removed', 'after fetching users');
+	$uidarr = array();
+	foreach ($result as $row) {
+		$uidarr[] = $row -> uid;
+	}
+        //watchdog('to be removed', 'after for loop');
+	$eics = user_load_multiple(array(), array('uid' => $uidarr));
+        //watchdog('to be removed', 'after user laod multiple');
+	if ($form_state['values']['nd'] && $form_state['values']['vd'] && $form_state['values']['ruid']) {
+		//watchdog('to be removed', 'log 1');
+		$node = node_load($form_state['values']['nd'], $form_state['values']['vd']);
+		//watchdog('to be removed', 'log 2');
+		$acct = user_load($form_state['values']['ruid']);
+		//watchdog('to be removed', 'log 3');
+
+		// set up email
+		if ($form_state['values']['status'] == 0) {
+			$body = variable_get('email_rev_reject_message', REV_REJECT_MSG);
+			$subject = variable_get('email_rev_reject_subject', REV_REJECT_SUB);
+			//watchdog('to be removed', 'before replacing tokens');
+			$subject = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $subject);
+                        //watchdog('to be removed', 'replace tokens');
+			$body = replace_email_tokens($node->nid, $body);
+			//$body = str_replace('{{title}}', $node -> title, $body);
+                        //watchdog('to be removed','aaa');
+			$body = str_replace('{{content}}', $form_state['values']['reason'], $body);
+			$body = str_replace('{{reviewer}}', $acct -> name, $body);
+			//$body = str_replace('{{url}}', url('node/' . $node -> nid, array('absolute' => TRUE)), $body);
+
+			$params['subject'] = $subject;
+			$params['message'] = $body;
+                        //watchdog('to be removed','before actions update');
+			update_actions_table(2, $node -> nid, $node -> vid, 'Reviewer rejected invitation', $acct -> uid, $acct -> uid);
+			//watchdog('to be removide','after actions update');
+			$d = db_update('paper_reviewer') -> condition('nid', $node -> nid) -> condition('vid', $node -> vid) -> condition('ruid', $acct -> uid) -> fields(array('accept' => 2, )) -> execute();
+			$form_state['redirect'] = '';
+
+		} else {
+			$body = variable_get('email_rev_accept_message', REV_ACCEPT_MSG);
+			$subject = variable_get('email_rev_accept_subject', REV_ACCEPT_SUB);
+			$subject = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $subject);
+			//$body = str_replace('{{title}}', $node -> title, $body);
+			 //watchdog('to be removed', 'before replacing tokens');
+			$body = replace_email_tokens($node->nid, $body);
+			//watchdog('to be removed', 'replace tokens');
+			$body = str_replace('{{reviewer}}', $acct -> name, $body);
+			//$body = str_replace('{{url}}', url('node/' . $node -> nid, array('absolute' => TRUE)), $body);
+
+			$params['subject'] = $subject;
+			$params['message'] = $body;
+			update_actions_table(2, $node -> nid, $node -> vid, 'Reviewer accepted invitation', $acct -> uid, $acct -> uid);
+
+			$reminder = time() + variable_get('review_management_first', 30) * 24 * 60 * 60;
+			$d = db_update('paper_reviewer') -> condition('nid', $node -> nid) -> condition('vid', $node -> vid) -> condition('ruid', $acct -> uid) -> fields(array('accept' => 1, 'next_reminder' => $reminder )) -> execute();
+
+			$form_state['redirect'] = 'node/' . $node -> nid;
+		}
+
+		// email eics
+                //commented as now the eics are cced from one-one
+		/*foreach ($eics as $user1) {
+			$params['account'] = $user1;
+			drupal_mail('testaction', 'one-one', $user1 -> mail, user_preferred_language($user1), $params);
+		}*/
+		// email editor of paper
+		if (isset($node -> field_editor['und'][0])) {
+			$eid = $node -> field_editor['und'][0]['uid'];
+
+		} else if (isset($node -> field_editor[0])) {
+			$eid = $node -> field_editor[0]['uid'];
+		}
+		$editor = user_load($eid);
+		drupal_mail('testaction', 'one-one', $editor -> mail, user_preferred_language($editor), $params);
+
+	}
+
+	drupal_set_message(t('Thank you.'));
+}
+
+function editor_form($form, &$form_state, $nd = null, $vd = null, $ruid = null) {
+	drupal_add_js(drupal_get_path('module', 'verify') . '/verify.js');
+	$form['status'] = array(
+		'#title' => t('Status'),
+		'#type' => 'radios',
+		'#maxlength' => 1,
+		'#description' => t(''),
+		'#options' => array(
+			1 => t('Yes, I agree to perform editorial duties for this paper'),
+			0 => t('No, I can\'t perform editorial duties for this paper at this time')
+		),
+		'#required' => true
+	);
+	$form['reason'] = array(
+		'#type' => 'textarea',
+		'#title' => t('Please provide a reason:'),
+		//'#description' => t('Please provide us the reason, we will appreciate if you could suggest us a few reviewers for this paper.'),
+		'#required' => false,
+	);
+	$form['nd'] = array(
+		'#type' => 'hidden',
+		'#value' => $nd,
+	);
+	$form['vd'] = array(
+		'#type' => 'hidden',
+		'#value' => $vd,
+	);
+	$form['ruid'] = array(
+		'#type' => 'hidden',
+		'#value' => $ruid,
+	);
+	$form['submit'] = array(
+		'#title' => 'Submit',
+		'#type' => 'submit',
+		'#value' => t('Submit')
+	);
+
+	return $form;
+}
+
+function editor_form_submit($form, &$form_state) {
+	module_load_include('module', 'testaction', 'testaction');
+    global $base_url;
+	if ($form_state['values']['nd'] && $form_state['values']['vd'] && $form_state['values']['ruid']) {
+		//watchdog('to be removed', 'log 1');
+		$node = node_load($form_state['values']['nd'], $form_state['values']['vd']);
+		//watchdog('to be removed', 'log 2');
+		$acct = user_load($form_state['values']['ruid']);
+		//watchdog('to be removed', 'log 3');
+
+		// set up email
+		if ($form_state['values']['status'] == 0) {
+			$body = variable_get('email_editor_reject_message', EDITOR_REJECT_MSG);
+			$subject = variable_get('email_editor_reject_subject', EDITOR_REJECT_SUB);
+			//watchdog('to be removed', 'before replacing tokens');
+			$subject = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $subject);
+                        //watchdog('to be removed', 'replace tokens');
+			$body = replace_email_tokens($node->nid, $body);
+			//$body = str_replace('{{title}}', $node -> title, $body);
+                        //watchdog('to be removed','aaa');
+			$body = str_replace('{{content}}', $form_state['values']['reason'], $body);
+			$body = str_replace('{{editor}}', $acct -> name, $body);
+			//$body = str_replace('{{url}}', url('node/' . $node -> nid, array('absolute' => TRUE)), $body);
+
+			$params['subject'] = $subject;
+			$params['message'] = $body;
+			$params['cc'] = get_eic_emails().', '.get_ea_emails();
+                        //watchdog('to be removed','before actions update');
+             $ruid = $node->field_editor['und'][0]['uid'];
+             //unset($node->field_editor['und'][0]['uid']);
+             $node->field_editor['und'][0]['uid'] = 0;
+             node_save($node);
+			update_actions_table(2, $node -> nid, $node -> vid, 'Editor rejected assignment', $acct -> uid, $acct -> uid);
+			db_delete('editor_reminder')
+              ->condition('nid', $node->nid, '=')
+              ->condition('vid', $node->vid, '=')
+              ->condition('ruid', $ruid, '=')->execute();
+			//watchdog('to be removide','after actions update');
+			$form_state['redirect'] = $base_url;
+
+		} else {
+			$body = variable_get('email_editor_accept_message', EDITOR_ACCEPT_MSG);
+			$subject = variable_get('email_editor_accept_subject', EDITOR_ACCEPT_SUB);
+			$subject = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $subject);
+			//$body = str_replace('{{title}}', $node -> title, $body);
+			 //watchdog('to be removed', 'before replacing tokens');
+			$body = replace_email_tokens($node->nid, $body);
+			//watchdog('to be removed', 'replace tokens');
+			$body = str_replace('{{reviewer}}', $acct -> name, $body);
+			//$body = str_replace('{{url}}', url('node/' . $node -> nid, array('absolute' => TRUE)), $body);
+
+			$params['subject'] = $subject;
+			$params['message'] = $body;
+			$params['cc'] = get_eic_emails().', '.get_ea_emails();
+			update_actions_table(2, $node -> nid, $node -> vid, 'Editor accepted invitation', $acct -> uid, $acct -> uid);
+
+			//$d = db_update('paper_reviewer') -> condition('nid', $node -> nid) -> condition('vid', $node -> vid) -> condition('ruid', $acct -> uid) -> fields(array('accept' => 1, )) -> execute();
+            $node->field_editor_accepted['und'][0]['value'] = REQUEST_TIME;
+            node_save($node);
+			$form_state['redirect'] = 'node/' . $node -> nid;
+		}
+
+		$eics = get_eic_emails();
+		drupal_mail('testaction', 'one-one', $eics, 'und', $params);
+
+	}
+
+	drupal_set_message(t('Thank you.'));
+}

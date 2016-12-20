@@ -163,7 +163,7 @@ function user_filter_form_submit($form, &$form_state) {
 function user_admin_account() {
 
   $header = array(
-    'username' => array('data' => t('Username'), 'field' => 'u.name'),
+    'username' => array('data' => t('name'), 'field' => 'u.name'),
     'status' => array('data' => t('Status'), 'field' => 'u.status'),
     'roles' => array('data' => t('Roles')),
     'member_for' => array('data' => t('Member for'), 'field' => 'u.created', 'sort' => 'desc'),
@@ -439,7 +439,7 @@ function user_admin_settings() {
 
   $form['email_title'] = array(
     '#type' => 'item',
-    '#title' => t('E-mails'),
+    '#title' => t('Emails'),
   );
   $form['email'] = array(
     '#type' => 'vertical_tabs',

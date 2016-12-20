@@ -1,0 +1,5 @@
+name = "Verify"
+description = "Allows reviewers to confirm or deny any requests."
+package = swj
+core = 7.x
+files[] = verify.module

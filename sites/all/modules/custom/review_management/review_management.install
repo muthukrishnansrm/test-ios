@@ -1,0 +1,166 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function review_management_schema() {
+  $schema['rm_paper_reviewer'] = array(
+    'description' => 'Table to store reviewer assignments',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Node id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'vid' => array(
+        'description' => 'Version id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'ruid' => array(
+        'description' => 'user id of the reviewer',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'submitted' => array(
+        'description' => 'flag to show review has been submitted',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'accept' => array(
+        'description' => 'flag to indicated if reviewer has accepted invite',
+        'type' => 'varchar',
+        'length' => 255,
+
+      ),
+      'added' => array(
+        'description' => 'Date on which reviewer is added',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+        'main' => array('nid', 'vid'),
+    ),
+  );
+
+  $schema['rm_paper_review'] = array(
+    'description' => 'Table to store reviewer assignments',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Node id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'vid' => array(
+        'description' => 'Version id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'uid' => array(
+        'description' => 'user id of the reviewer',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'comment' => array(
+        'description' => 'Review comment',
+        'type' => 'text',
+
+      ),
+      'comment_format' => array(
+        'description' => 'comment format needed for text area formatting',
+        'type' => 'varchar',
+        'length' => 255,
+
+      ),
+      'p_comment' => array(
+        'description' => 'Review comments for editors',
+        'type' => 'text',
+
+      ),
+      'p_comment_format' => array(
+        'description' => 'Comment format needed for text area formatting',
+        'type' => 'varchar',
+        'length' => 255,
+
+      ),
+      'suggestion' => array(
+        'description' => 'Suggested review verdict',
+        'type' => 'varchar',
+        'length' => 25  ,
+
+      ),
+      'created' => array(
+        'description' => 'Unix timestamp representing the time of review submission',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'anon' => array(
+        'description' => 'Review submitted as anonymous',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+        'pr_main' => array('nid', 'vid', 'uid'),
+    ),
+  );
+
+  $schema['rm_swj_actions'] = array(
+    'description' => 'Table to store action history of papers. Used with action history entity',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Node id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'vid' => array(
+        'description' => 'Version id of the paper',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'action_by' => array(
+        'description' => 'user id of the action performer',
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'description' => array(
+        'description' => 'Description of the action',
+        'type' => 'text',
+
+      ),
+      'value' => array(
+        'description' => 'Text value of the action, generic field',
+        'type' => 'text',
+
+      ),
+      'type' => array(
+        'description' => 'Type of action',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => FALSE,
+      ),
+      'action_date' => array(
+        'description' => 'Unix timestamp representing the time of action',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+        'pr_main' => array('nid', 'vid'),
+    ),
+  );
+
+  return $schema;
+}
+

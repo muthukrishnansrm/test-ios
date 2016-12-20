@@ -1,0 +1,7 @@
+name = "Review Select"
+description = "This form is used to select reviewers"
+package = swj
+core = 7.x
+files[] = reviewer_select.module
+dependencies[] = ctools
+dependencies[] = email_verify

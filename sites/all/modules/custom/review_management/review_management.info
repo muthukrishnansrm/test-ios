@@ -1,0 +1,5 @@
+name = Review Management
+description = Review management module for journals
+core = 7.x
+package = Journal
+configure=admin/config/system/review_management

@@ -1,0 +1,109 @@
+<?php
+
+/**
+ * @file
+ * Contains install, update, and uninstall functions for Skinr.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function skinr_schema() {
+  watchdog('skinr','called');
+  $schema['skinr_skins'] = array(
+    'description' => 'Stores skinr data.',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'The primary identifier for a skin configuration.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'theme' => array(
+        'description' => 'The theme this configuration applies to.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'module' => array(
+        'description' => 'The module this configuration applies to.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'element' => array(
+        'description' => 'The element this configutation applies to.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'skin' => array(
+        'description' => 'The skin that has been applied.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'options' => array(
+        'description' => 'A serialized array containing the skin options that have been applied.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Boolean indicating whether or not this item is enabled.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny',
+      ),
+    ),
+    'primary key' => array('sid'),
+    'indexes' => array(
+      'theme' => array('theme'),
+      'module' => array('theme', 'module'),
+      'element' => array('theme', 'module', 'element'),
+      'skin' => array('skin'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function skinr_uninstall() {
+  // Remove all skinr variables.
+  db_delete('variable')
+    ->condition('name', 'skinr_%', 'LIKE')
+    ->execute();
+}
+
+/**
+ * Implements hook_update_last_removed().
+ *
+ * Make sure any previous updates aren't skipped.
+ */
+function skinr_update_last_removed() {
+  // Determine version 6.x-1.x or 6.x-2.x.
+  $version = drupal_get_installed_schema_version('skinr');
+  if ($version >= 7000) {
+    // 7.x-2.x.
+    return 7003;
+  }
+  if ($version == 6100) {
+    // 6.x-1.x.
+    return 6100;
+  }
+  elseif ($version >= 6000) {
+    // 6.x-2.x.
+    return 6004;
+  }
+}
+
+

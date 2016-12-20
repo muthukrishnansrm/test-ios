@@ -3220,7 +3220,7 @@ function system_send_email_action_submit($form, $form_state) {
  *   provided.
  * @param array $context
  *   Array with the following elements:
- *   - 'recipient': E-mail message recipient. This will be passed through
+ *   - 'recipient': Email message recipient. This will be passed through
  *     token_replace().
  *   - 'subject': The subject of the message. This will be passed through
  *     token_replace().
@@ -3317,7 +3317,7 @@ function system_goto_action_form($context) {
   $form['url'] = array(
     '#type' => 'textfield',
     '#title' => t('URL'),
-    '#description' => t('The URL to which the user should be redirected. This can be an internal path like node/1234 or an external URL like http://example.com.'),
+    '#description' => t('The URL to which the user should be redirected. This can be an internal URL like node/1234 or an external URL like http://drupal.org.'),
     '#default_value' => isset($context['url']) ? $context['url'] : '',
     '#required' => TRUE,
   );

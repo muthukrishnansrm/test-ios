@@ -1,0 +1,6 @@
+; $Id$
+name = testaction
+description = "A test action for certain events.."
+package = swj
+core = 7.x
+files[] = testaction.module

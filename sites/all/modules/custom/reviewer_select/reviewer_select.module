@@ -1,0 +1,913 @@
+<?php
+
+/**
+ * @author Kunal Sengupta.
+ */
+require ("reviewer_select_constants.inc");
+require ("reviewer_select_utility.inc");
+require ("reviewer_select_forms.inc");
+require ("reviewer_select_modal.inc");
+module_load_include('module', 'testaction', 'testaction');
+
+/*hook_menu implementation*/
+
+function reviewer_select_menu() {
+
+
+  $items['swj/reviewselect/history/pager'] = array(
+      'title' => t('History table pager callback'),
+      'type' => MENU_CALLBACK,
+      'page callback' => '_history_pager_callback',
+      //'access arguments' => array('access content'),
+      'access callback' => 'history_pager_access_callback',
+  );
+  $items['swj/reviewselect/history/delete'] = array(
+      'title' => t('History table delete callback'),
+      'type' => MENU_CALLBACK,
+      'page callback' => '_history_delete_callback',
+      'access callback' => 'history_delete_access_callback',
+  );
+  $items['swj/reviewselect/addreviewer/pager'] = array(
+      'title' => 'Test Pager Callback',
+      'type' => MENU_CALLBACK,
+      'page callback' => '_add_reviewer_pager_callback',
+      'access arguments' => array('access content'),
+      'access callback' => 'addreviewer_pager_access_callback'
+  );
+
+  $items['swj/tags_setting/out_review'] = array(
+      'title' => 'Set out for review tag',
+      'page callback' => 'set_out_for_review',
+      'page arguments' => array(3),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+  //items for modal callback
+    $items['swj/%ctools_js/reviewer'] = array(
+      'title' => 'Add Reviewer',
+      'page callback' => 'reviewer_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+     // 'access callback' => 'editor_access_callback',
+     // 'access arguments' => array(1),
+      'type' => MENU_CALLBACK,
+  );
+  $items['swj/edit_files'] = array(
+      'title' => 'Edit Files',
+      'page callback' => 'edit_content_common',
+      //'page arguments' => array('edit_content_common'),
+      'access callback' => TRUE,
+     // 'access callback' => 'editor_access_callback',
+     // 'access arguments' => array(1),
+      'type' => MENU_CALLBACK,
+  );
+
+  $items['swj/%ctools_js/review'] = array(
+      'title' => 'Add Review',
+      'page callback' => 'add_review_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+ $items['swj/%ctools_js/invite'] = array(
+      'title' => 'Invite a Reviewer',
+      'page callback' => 'invite_reviewer_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+$items['swj/%ctools_js/decision'] = array(
+      'title' => 'Submit Decision Letter',
+      'page callback' => 'decision_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+
+ $items['swj/%ctools_js/decisionwarning'] = array(
+      'title' => 'Submit Decisionwarning Letter',
+      'page callback' => 'decisionwarning_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+
+
+$items['swj/%ctools_js/email_eic'] = array(
+      'title' => 'Send email to EIC',
+      'page callback' => 'email_eic_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+/* $items['swj/%ctools_js/rev_reminder'] = array(
+      'title' => 'Configure Review Reminders',
+      'page callback' => 'rev_reminder_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  ); */
+$items['swj/%ctools_js/edit_content_modal'] = array(
+      'title' => 'Edit content',
+      'page callback' => 'edit_common_modal_callback',
+      'page arguments' => array(1),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+
+function reviewselect_access_callback() {
+  global $user;
+  if ($user->uid == 0)
+    return false;
+
+  return true;
+}
+
+function history_pager_access_callback() {
+  global $user;
+  if ($user->uid == 0)
+    return false;
+
+  return true;
+}
+
+function history_delete_access_callback() {
+  global $user;
+  $r = db_query("Select count(u.uid) from users_roles u INNER JOIN role r on u.rid = r.rid where u.uid =" . $user -> uid . " and r.name='" . EIC_ROLE . "'") -> fetchField();
+
+  if ($user->uid == 0 || $r != 1)
+    return false;
+
+  return true;
+}
+
+
+function addreviewer_pager_access_callback() {
+  global $user;
+  if ($user->uid == 0)
+    return false;
+
+  return true;
+}
+
+function profile_access_callback() {
+  global $user;
+  if ($user->uid == 0)
+    return false;
+
+  return true;
+}
+
+/**
+ * hook_node_submit implementation
+ * This method is called when a node is submitted.
+ * We check if the an editor has been invited for the paper and send the email to the editor.
+ */
+function reviewer_select_node_submit($node, $form, &$form_state) {
+  if ($node -> type == 'submit_paper') {
+    global $user;
+      //set previous version
+      if(isset($form_state['values']['previous_version']) && $form_state['values']['previous_version'] != ''){
+            $trackingnumber = (explode('-', $form_state['values']['previous_version']));
+            //$form_state['values']['field_previous_version']['und'][0]['nid'] = $trackingnumber[0];
+            $node->field_previous_version['und'][0]['nid'] = $trackingnumber[0];
+      }
+
+    // only send email if not in preview and selected editor is different than original
+    if (strtolower($form_state['values']['op']) == 'submit'){
+
+      if(isset($form_state['values']['authors'])){
+          set_authors_to_paper($node, $form_state['values']['authors']);
+      }
+
+      //If editor has changed notify them
+      if( isset($form_state['input']['field_editor']['editor_original'])
+        && $form_state['input']['field_editor']['und'] != $form_state['input']['field_editor']['editor_original']) {
+
+      //get the account of the editor
+      $acct = user_load($form_state['input']['field_editor']['und']);
+      $message = $form_state['input']['field_editor']['custom_email_editor'];
+      $sub = variable_get('email_editor_assn_subject', SUBMISSION_EDITOR_SUB);
+      $attr['subject'] = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $sub);
+      $attr['message'] = $message;
+      //Send email to the editor.
+       drupal_mail('testaction', 'one-one', $acct -> mail, '', $attr);
+      //update actions table.
+      update_actions_table(4, $node -> nid, $node -> vid, $acct-> name . ' is made the responsible editor <br/>'. '<b>Email Sent<br/>To :</b> ' . $acct->name .' ('. $acct->mail. ')  <br/><b>subject :</b> ' . $attr['subject'] . '<br/> <b>message: </b>'. $attr['message'], $user -> uid, $acct -> uid);
+    }
+    }
+
+  }
+}
+
+
+function reviewer_select_node_validate($node, $form, &$form_state) {
+ global $user;
+  if ($node->type == 'submit_paper' ){
+    if (isset($_GET['mode']) && $_GET['mode'] === 'onlyfiles'){
+      return;
+    }
+    //validate previous version
+    if(isset($form_state['values']['previous_version']) && $form_state['values']['previous_version']!= ''){
+      $previous_id = $form_state['values']['previous_version'];
+
+      $trackingnumber = (explode('-', $previous_id));
+      if(count($trackingnumber) != 2){
+        form_set_error('previous_version', 'Please enter a valid tracking number (example: 123-343)');
+        return;
+      }
+      $node_previous = node_load($trackingnumber[0], $trackingnumber[1]);
+      if(!$node_previous){
+        form_set_error('previous_version', 'Paper with tracking number '. $previous_id . ' does not exist');
+      }/* else{
+
+        $uids = get_authors($node_previous);
+        $isAuthor = false;
+        foreach ($uids as $uid){
+          if($uid == $user->uid){
+            $isAuthor = TRUE;
+            break;
+          }
+        }
+        if(!$isAuthor){
+          form_set_error('previous_version', 'You must be an author of the previous version');
+        }
+      } */
+
+  }
+
+
+    module_load_include('module', 'email_verify', 'email_verify');
+
+    //check for terms and conditions
+    if($form_state['values']['field_terms_and_conditions']['und'][0]['value'] == 'Decline'){
+      form_set_error('field_terms_and_conditions', 'You must accept the terms and conditions to submit a paper. Please contact our editors in chief for any clarifications, contact@semantic-web-journal.net.');
+    }
+    //check if duplicate authors are inserted
+    // enforce submitting user to be an author of the paper
+    $authorMatched = false;
+    $duplicateAuthor = false;
+    $authorNameArray = array();
+    $authorNameArray [] = 'garbage#123444444';
+
+    $authorEmailArray = array();
+    $authorEmailArray[] ='garbage#$#$#$#$#';
+    $errorString = "Author Field Error(s) <ul>";
+    $errorFlag = false;
+    foreach ($form_state['values']['authors'] as $author) {
+      $firstname = $author['field_first_name'];
+      $lastname = $author['field_last_name']; 
+      $name = $author['email'];
+      $email = $author['email'];
+
+      if($firstname == ''){
+        $errorString .=  "<li>".t('Author first name cannot be empty')."</li>";
+        $errorFlag = true;
+      }
+      
+       if($lastname == ''){
+        $errorString .=  "<li>".t('Author last name cannot be empty')."</li>";
+        $errorFlag = true;
+      }
+      if($email == ''){
+        $errorString .=  "<li>".t('Author email cannot be empty')."</li>";
+        $errorFlag = true;
+      }
+
+      if(array_search(strtolower($name), $authorNameArray)>=1 || array_search( $email, $authorEmailArray)>=1)
+      {
+        $duplicateAuthor = true;
+      }else{
+        $authorNameArray[] = strtolower($name);
+        $authorEmailArray[] = $email;
+      }
+      if (is_eic_user() || user_is_anonymous() || strcasecmp($email, $user->mail) == 0) {
+        //if logged in user is EIC don't bother.
+          $authorMatched = true;
+      }
+
+      if(!valid_email_address($email)){
+
+        $errorString .=  "<li>".t('Invalid email address')."</li>";
+        $errorFlag = true;
+      }
+
+      if($error = email_verify_check($email)){
+        $errorString .= "<li>".$error."</li>";
+        $errorFlag = true;
+
+      }
+    }
+    if ($authorMatched == false && !isset($node->nid)) {
+      //form_set_error('field_author', t('You must be an author of this submission'));
+      $errorString .= "<li>".t('You must be an author of this submission')."</li>";
+      $errorFlag = true;
+    }
+    if($duplicateAuthor){
+      $errorString .=  "<li>".t('Duplicate Author name/email values')."</li>";
+      $errorFlag = true;
+    }
+
+
+    if($errorFlag){
+      form_set_error('authors', $errorString);
+    }
+  }
+}
+
+// This function adds the add me link on the submission page. It uses the hidden fields that are added in the hook_form_alter in this
+//file. Hidden variables are : user_info_fullname, user_info_email.
+
+function reviewer_select_after_build($form, $form_state)
+{
+  //add me link for authors
+  if (empty($form['nid']['#value'])) {
+    //$fullname = explode(' ', $user->name, 2);
+    global $user;
+    $name = $user->name;
+    $email = $user->mail;
+    drupal_add_js('
+        jQuery(document).ready(function() {
+
+
+        function addAddMeBtn() {
+        var $athrs = jQuery("[id^=edit-authors]");
+        var $addme = jQuery("<a />");
+        $addme.attr({"href": "#", "class": "add-me-btn"})
+        .html("Add Me")
+        .css({"float": "right"});
+
+        var $existing = $athrs.find("nth-child(2) a.add-me-btn");
+        if ($existing.length < 1) {
+        $athrs.find("tr td:nth-child(2)").prepend($addme);
+
+        $athrs.find("tr td:nth-child(2) a").click(function() {
+        var $fn = "'.$name.'",
+        //$ln = jQuery("input[name=user_info_last_name]"),
+        $em = "'.$email.'",
+        $prt = jQuery(this).parent("td");
+        $prt.find("div.field-name-field-fullname input").val($fn);
+        //$prt.find("div.field-name-field-lname input").val($ln.val());
+        $prt.find("div.field-name-field-mail input").val($em);
+
+        return false;
+  });
+  }
+  }
+
+        addAddMeBtn();
+        jQuery("body").ajaxComplete(function() {
+        addAddMeBtn();
+  });
+  });
+        ', array('type' => 'inline'));
+  }
+  return $form;
+}
+
+function manage_search_by_author($form, &$form_state){
+
+ if(is_array($form_state['values']['field_authors_ref_uid']) && count($form_state['values']['field_authors_ref_uid'])==0){
+   return;
+ }
+  $name = $form_state['values']['field_authors_ref_uid'];
+
+  $results = db_query('select name, uid from users where name like \'%'.$name.'%\'');
+
+  if($results->rowCount() == 0){
+    drupal_set_message('No results found for '.$name);
+    return;
+  }
+  $form_state['values']['field_authors_ref_uid'] = array();
+  foreach( $results as $res){
+    $form_state['values']['field_authors_ref_uid'][$res->uid]= $res->uid;
+
+  }
+
+}
+
+function reviewer_select_form_alter(&$form, &$form_state, $form_id) {
+
+  if($form_id == 'views_exposed_form'){
+    if(!isset($form['field_authors_ref_uid'])){
+      return;
+    }
+     $form['field_authors_ref_uid'] = array(
+            '#type' => 'textfield',
+            '#default' => '',
+            )
+        ;
+      array_unshift($form['#submit'], 'manage_search_by_author');
+  }
+  if($form_id == 'user_register_form'){
+    $form['account']['name']['#attributes']['placeholder'] = t('Please use firstname<space>lastname as the username');
+  }
+  if ($form_id == 'submit_paper_node_form') {
+
+    global $user;
+    //if(){
+    //}
+    //$form['#after_build'][] = 'reviewer_select_after_build';
+    $isEIC = is_eic_user();
+
+    // if val of dropdown changes, show box, then send email
+    drupal_add_js(drupal_get_path('module', 'reviewer_select') . '/reviewer_form.js');
+
+    //  unset($form['field_authors_ref']);
+    $form['actions']['submit']['#value'] = t('Submit');
+    // Form for adding authors.
+    $form['previous_version'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Tracking number of previous version',
+        '#description' => 'If this is a revision of a previous version please enter the tracking number of your last submission. Leave blank if this is a new submission.'
+
+        );
+    $node = NULL;
+    if(isset($form['nid']['#value'])){
+      $node = node_load($form['nid']['#value']);
+    }else{
+      $form['field_decision']['#access'] = FALSE;
+      $form['field_decision_letter']['#access'] = FALSE;
+      $form['field_approval']['#access'] = FALSE;
+      $form['field_previous_version']['#access'] = FALSE;
+      $form['field_tags']['#access'] = FALSE;
+      $form['field_flag']['#access'] = FALSE;
+      $form['field_hidereviews']['#access'] = FALSE;
+      $form['field_show_cover_letter']['#access'] = FALSE;
+    }
+    $form['field_last_action']['#access'] = FALSE;
+    $form['auth_add'] = add_author_form($form, $form_state, $node);
+    // change value of add author button
+    //$form['field_author']['und']['add_more']['#value'] = 'Add another author';
+
+    // hide text format select
+    drupal_add_css('#edit-field-abstract fieldset,
+        #edit-field-cover-letter fieldset,
+        #edit-field-decision-letter fieldset { display: none; }', array('type' => 'inline')); // visually hide
+    $form['field_abstract']['und'][0]['#format'] = 'filtered_html'; // provide default values
+    $form['field_cover_letter']['und'][0]['#format'] = 'filtered_html';
+    $form['field_decision_letter']['und'][0]['#format'] = 'filtered_html';
+    $form['field_authors_ref']['#access'] = FALSE;
+    //unset($form['actions']['delete']);
+
+
+    // hide responsible editor if new node
+    if (empty($form['nid']['#value'])) {
+      drupal_add_js('jQuery(document).ready(function () { jQuery(".form-item-field-editor-und").hide(); });', array('type' => 'inline'));
+    }
+
+   if ((isset($_GET['mode']) && $_GET['mode'] === 'onlyfiles') || isset($form_state['onlyfiles'])) {
+        foreach(array_keys($form) as $key){
+          if(strpos($key, 'field_') === 0 && !
+              ((strcmp($key, 'field_pdf')  === 0)  ||
+                  (strcmp($key, 'field_supplementary_files') === 0 ) ||
+                  (strcmp($key, 'field_tags')  === 0) ||
+                  (strcmp($key, 'field_flag')  === 0)
+                  )){
+
+              $form[$key]['#access'] = FALSE;
+
+          }
+        }
+
+        $form_state['onlyfiles'] = TRUE;
+
+        return $form;
+    }
+    if ($isEIC) {
+
+      $msg = '';
+      if(isset($form_state['node']->nid)){
+        $msg = replace_email_tokens($form_state['node']->nid, variable_get('email_editor_assn_message', SUBMISSION_EDITOR_MSG));
+      }
+
+      $form['field_editor']['custom_email_editor'] = array(
+          '#title' => 'Email body',
+          '#type' => 'textarea',
+          '#description' => 'You can change the default text to be sent to the editor.',
+          '#cols' => 40,
+          '#rows' => 5,
+          '#language' => 'und',
+          '#required' => FALSE,
+          '#default_value' => $msg,
+          '#states' => array('invisible' => array('select#edit-field-editor-und' => array('value' => '_none')))
+      );
+
+      if (isset($form_state['input']['field_editor']['editor_original'])) {
+        $form['field_editor']['editor_original'] = array(
+            '#title' => 'Editor original',
+            '#type' => 'hidden',
+            '#default_value' => $form_state['input']['field_editor']['editor_original']
+        );
+        return;
+      }
+
+      $orig = (isset($form_state['node'] -> field_editor) && (sizeof($form_state['node'] -> field_editor) > 0) ? $form_state['node'] -> field_editor['und'][0]['uid'] : '_none');
+      $form['field_editor']['editor_original'] = array(
+          '#title' => 'Editor original',
+          '#type' => 'hidden',
+          '#default_value' => $orig
+      );
+
+
+
+    }
+
+  }
+
+}
+
+//TODO organize this function.
+/**
+ * This function adds forms to be displayed on the node view page
+ * We want minimal use of the edit functionality.
+ * Edit node is available only to editors in chief and admin users.
+ * Editors and reviewers only get the node view page and we embed their tasks via forms on the view page.
+ * We add array elements to $node->content array which is used to display the view page in the theme.
+ * If things don't appear the way you want please check you have correctly implemented the node_tpl.php for this node type 'submit_paper'.
+ * Everything accessible to Editors is also accesible to eic.
+ */
+function reviewer_select_node_view($node, $view_mode, $langcode) {
+  //dpm(module_implements('node_access'));
+  //handle to the logged in user
+  global $user;
+  global $base_url;
+  //the request uri
+  $request_uri = request_uri();
+  //flag to indicate if the forms should be hidden.
+  $hideForms = false;
+  $isEIC = is_eic_user();
+  $isResponsibleEditor = is_responsible_editor($node);
+
+
+
+  if (isset($node -> in_preview) && $node -> in_preview) {
+    //node view is also called in the preview mode. We don't want to add all the forms in the preview.
+    //So return if that is the case.
+    if(isset($node->authors) && !is_eic_user()){
+      $node->content['authors_prev'] = drupal_get_form('get_authors_preview', $node);
+      //$node->content['field_authors_ref'] = array();
+    }
+
+    return;
+  }
+
+  //we proceed only if the node is of type 'submit_paper' and 'view' mode.
+  if ($node -> type == 'submit_paper' && $view_mode != 'preview' && $view_mode != 'teaser') {
+    //Again for adding comments the whole node is shown. We don't want to edit anything. So return.
+    if(strstr($request_uri,'comment') && strstr($request_uri,'reply')){
+      return;
+    }
+
+  if($isResponsibleEditor && (!isset($node->field_editor_accepted['und'][0]['value']) || $node->field_editor_accepted['und'][0]['value']==0)){
+     $editor_form = array(drupal_get_form('editor_form', $node -> nid, $node -> vid, $user -> uid));
+      $node -> content['editor_form'] = array(
+              '#title' => 'Confirm editorial responsibility',
+              '#type' => 'fieldset',
+              '#description' => 'Please choose if you would like to be the editor of this paper',
+              'verify' => $editor_form
+          );
+      return;
+  }
+    //show cover letter if reviewer has permission
+    if(is_reviewer($user, $node) && isset($node->field_show_cover_letter['und']) && $node->field_show_cover_letter['und'][0]['value'] ==1){
+        $node->content['field_cover_letter']['#access'] = TRUE;// = $node->field_cover_letter['und'][0]['value'];
+        $node->content['field_supplementary_files']['#access'] = TRUE;
+    }
+    //print_r($node->content['links']['nodereference_url']);
+    if(isset($node-> content['links']['nodereference_url']['#links']) && sizeof($node-> content['links']['nodereference_url']['#links'])>=1){
+      $node-> content['cam_ready']['#theme'] = 'links__node__nodereference';
+      $node-> content['cam_ready']['#links']['camera_ready_files_field_paper'] = $node-> content['links']['nodereference_url']['#links']['camera_ready_files_field_paper'];
+      $node-> content['cam_ready']['#attributes'] = array('class'=> array('links','inline'));
+      $node-> content['links']['nodereference_url']['#links']['camera_ready_files_field_paper'] = array();
+    }
+
+
+    //check hideit
+    $node->hideit = true;
+    $node->showFinalVersionLink = false;
+    if (isset($node -> field_tags['und']) && (isset($node -> field_tags['und']) && $node -> field_tags['und'][0]['tid'] != 1)) {
+      $node->showFinalVersionLink = showCameraReady($node);
+    }
+
+    //get submitted reviews
+
+    $node -> content['submitted_reviews'] = drupal_get_form('get_submitted_reviews',$node);
+
+    if ($isResponsibleEditor || $isEIC) {
+      module_load_include('inc', 'node', 'node.pages');
+      $node->showNotes = true;
+
+      //action history table.
+      $form_actions_hitory['history_table'] = get_history($node);
+      $node -> content['actions'] = $form_actions_hitory;
+      $form_actions_hitory = array('#type' => 'fieldset', '#title' => 'Action History');
+
+      //Get authors table form, where editors can email the authors.
+      $node -> content['field_authors_ref'] = drupal_get_form('authors_table_form', $node);
+      $node -> content['authors_table'] = "";
+
+      if(isset($node->content['field_decision_letter'])){
+        $node->hideit = false;
+      }
+      $form = drupal_get_form('submit_paper' . '_node_form', $node);
+      if($isEIC){
+
+        $node -> content['field_responsible_editor'] = array();
+
+        //embed editor assignment on the paper page.
+        $node -> content['field_editor'] = drupal_get_form('assign_editor_form', $form, $node);
+      }
+
+
+      $node->content['allow_cover'] = drupal_get_form('allow_cover_letter_form', $form, $node);
+
+
+      /* If the paper is reviewed we don't show these fields on the view page*/
+      if (!$isEIC && (!isset($node -> field_tags['und']) || (isset($node -> field_tags['und']) && $node -> field_tags['und'][0]['tid'] != 1))) {
+        if(isset($node -> field_tags['und']) && $node->field_decision['und'][0]['value'] == 'Accept'){
+          $node->showFinalVersionLink = true;
+        }
+        if($isEIC && !is_closed_system()){
+        $node -> content['hide_review'] = drupal_get_form('form_hide_reviews', $node);
+	}
+        return;
+      }
+      //form that displays selected reviewers
+      $node -> content['selectedrev'] = drupal_get_form('selectedrev_form',$node);
+      if($isEIC){
+        $node -> content['update_files'] = array(
+                         'markup' => array (
+                               '#markup' =>
+                                       ('<hr/><a href="' . $base_url . '/node/'. $node->nid .'/edit?mode=onlyfiles"><b>Edit Fields</b></a>')
+                                      )
+                          );
+      }
+
+      $hideFromEditor = true;
+      //watchdog('This is the value', $node->field_decision['und'][0]['value']);
+      if(isset($node->field_decision['und'][0]['value']) && ($node->field_decision['und'][0]['value'] == NULL || (isset($node->field_approval['und']) && $node->field_approval['und'][0]['value']=='sendback'))){
+        //watchdog('got him', 'got him1');
+        $hideFromEditor = false;
+      }
+      if (!(isset($node -> field_decision['und']) && sizeof($node -> field_decision['und']) > 0)) {
+        $hideFromEditor =false;
+        //$node -> content['decision'] = drupal_get_form('decision_form', $form, $node);
+      }
+      //Actions links that appears on the paper page. Provides a dropdown to assign reviewers, submit decision.
+      $node -> content['actions_eic'] = getDropDownMenu($node->nid, $hideFromEditor);
+
+    }else{
+      $node-> content['links']['nodereference_url']['#links'] = array();
+      //hide decision if not approved
+      if(!is_approved($node)){
+        $node-> content['field_decision'] = array();
+      }
+    }
+
+
+    $showContactEditor  = FALSE;
+    //watchdog('is author', is_author($user, $node));
+    if( $isEIC || is_author($user, $node)){
+      $showContactEditor = TRUE;
+    }
+    //The following code embeds the review form for the reviewers of the paper.
+    $nbr_records = db_query("SELECT nid, accept FROM {paper_reviewer} where nid =" . $node -> nid . " and ruid = " . $user -> uid . " and vid = " . $node -> vid);
+  //  if(!($isResponsibleEditor)){
+      foreach ($nbr_records as $n) {
+        if ($n -> accept == 1) {
+          $showContactEditor = TRUE;
+          $review = get_review($node, $user);
+          if ($review == '') {
+            $node -> content['add_review'] = array(drupal_get_form('review_form', $node, $user));
+          } else {
+            $node -> content['add_review'] = $review;
+          }
+        } else if ($n -> accept == 0) {
+          $review_form = array(drupal_get_form('verify_form', $node -> nid, $node -> vid, $user -> uid));
+          $node -> content['add_review'] = array(
+              '#title' => 'Confirm Review Request',
+              '#type' => 'fieldset',
+              '#description' => 'Confirm or reject invitation to review paper',
+              'verify' => $review_form
+          );
+
+        }
+      }
+ //   }
+
+    if($showContactEditor){
+      if(isset($node->field_editor['und']))
+      $node->content['contact_editor'] = array(
+                         'markup' => array (
+                               '#markup' =>
+                                       ('<a href="' . $base_url . '/swj/email/' . $node->nid . '/' . $node->vid . '/' .
+                                            get_responsible_editor($node) .
+                                            '"><b>Contact Editor (Email)</b></a>')
+                                      )
+                          );
+    }else{
+      //unset($node->content['contact_editor']);
+    }
+  }
+}
+
+
+function get_review_html($node , $reviewer){
+  global $user;
+
+  $query = db_select('paper_review', 'p');
+  $query -> condition('p.nid', $node -> nid, '=');
+  $query -> condition('p.vid', $node -> vid, '=');
+  $query -> condition('p.uid', $reviewer -> uid, '=');
+  $query -> fields('p', array(
+      'comment',
+      'comment_format',
+      'suggestion',
+      'p_comment',
+      'p_comment_format',
+      'created',
+      'anon',
+      'impression',
+      'technical_quality',
+      'originality',
+      'bibliography',
+      'abstract_adequacy',
+      'introduction',
+      'organization',
+      'english',
+      'presentation'
+  ));
+
+  $results = $query -> execute();
+  $count = 0;
+  foreach ($results as $result) {
+    $count++;
+    if ($result -> suggestion == 'accept')
+      $suggestion = t('Accept');
+    else if ($result -> suggestion == 'minor')
+      $suggestion = t('Minor revision');
+    else if ($result -> suggestion == 'major')
+      $suggestion = t('Major revision');
+    else if ($result -> suggestion == 'rej resub')
+      $suggestion = t('Reject and resubmit');
+    else if ($result -> suggestion == 'reject')
+      $suggestion = t('Reject');
+    else
+      $suggestion = '';
+
+    $anontext = 'Reviewer has chosen <b>not</b> to be <strong><em>Anonymous</em></strong>';
+    if($result->anon == 1){
+	$anontext = 'Reviewer has chosen to be <strong><em>Anonymous</em></strong>';
+    }
+    if(!is_closed_system()){
+      $anontext = '<p>'.$anontext.'</p>';
+    }else{
+      $anontext ='';
+    }
+    $html = "";
+
+    $html .= $anontext;
+
+                       if($user->uid == $reviewer->uid || is_responsible_editor($node) || is_eic_user()) {
+                         $html.= '<p><b>Comment for editor: (Not visible to authors)</b><br/>' . check_markup($result -> p_comment, $result -> p_comment_format).'</p>' ;
+                       }
+                       $html.= '<p><b>Overall Impression:</b> ' . $result->impression . '</p>'.
+                       '<p><b>Suggested Decision: </b> ' . $suggestion .
+                       '<p><b>Content</b></p>'.
+                       '</p><p><b>Technical Quality of the paper:</b> ' . $result->technical_quality .
+                       '<br/><b>Originality of the paper:</b> ' . $result->originality .
+                       '<br/><b>Adequacy of the bibliography:</b> ' . $result->bibliography . '</p>'.
+                       '<p><b>Presentation:</b></p>'.
+                       '<p><b>Introduction: background and motivation:</b> ' . $result->introduction .
+                       '<br/><b>Organization of the paper: </b>' . $result->organization .
+                       '<br/><b>Level of English:</b> ' . $result->english .
+                       '<br/><b>Overall presentation:</b> ' . $result->presentation . '</p>'.
+                       '<p><b>Detailed Comments: </b><br/>' . check_markup($result -> comment, $result -> comment_format). '</p>';
+    }
+    return $html;
+}
+
+function get_review($node, $user) {
+
+  $query = db_select('paper_review', 'p');
+  $query -> condition('p.nid', $node -> nid, '=');
+  $query -> condition('p.vid', $node -> vid, '=');
+  $query -> condition('p.uid', $user -> uid, '=');
+  $query -> fields('p', array(
+      'comment',
+      'comment_format',
+      'suggestion',
+      'p_comment',
+      'p_comment_format',
+      'created',
+      'anon',
+      'impression',
+      'technical_quality',
+      'originality',
+      'bibliography',
+      'abstract_adequacy',
+      'introduction',
+      'organization',
+      'english',
+      'presentation'
+  ));
+
+  $results = $query -> execute();
+
+  if($results->rowCount() ==0 ){
+    return '';
+  }
+  $rows = array();
+  $rows[] = array( 'name' => get_review_html($node, $user));
+
+
+  $build['reviewer_table'] = array(
+      '#theme' => 'table',
+      '#header' => array(),
+      '#rows' => $rows,
+      '#attributes' => array(),
+  );
+
+  $form['fset'] = array(
+      '#title' => t('Reviews'),
+      '#type' => 'fieldset',
+      '#description' => t('Review submitted by You.')
+  );
+  $form['fset']['nd'] = array(
+      '#title' => t('Reviews'),
+      '#type' => 'text',
+      '#value' => 'dummy',
+      '#suffix' => render($build),
+  );
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_user_login
+ * If the user is a reviewer of a paper we assign the role SolicitedReviewer
+ * This role is only used in a block (Reviewer Actions).
+ */
+function reviewer_select_user_login(&$edit, $account) {
+  $r = db_query("Select count(ruid) from paper_reviewer  where ruid =" . $account -> uid . " and accept in (0,1)") -> fetchField();
+  $role = user_role_load_by_name('SolicitedReviewer');
+  if($r > 0){
+    user_multiple_role_edit(array($account->uid), 'add_role', $role->rid);
+  }else{
+    user_multiple_role_edit(array($account->uid), 'remove_role', $role->rid);
+  }
+}
+
+/**
+hook_init implementation
+*/
+function reviewer_select_init(){
+   if (isset($_GET['l']) && user_is_anonymous()) {
+      $token = $_GET['l'];
+
+    $uid = db_select('login_data', 'l')
+      ->fields('l', array('uid'))
+      ->condition('l.token', $token)
+      ->execute()
+      ->fetchField();
+
+    $user = user_load($uid);
+    $form_state['uid'] = $user->uid;
+    if ($user->uid != 1 && $user->status == 1) {
+      user_login_submit(array(), $form_state);
+       drupal_goto(current_path());
+    }
+   }
+
+}
+
+function reviewer_select_views_api() {
+  return array(
+    'api' => 3,
+  );
+}
+
+/**
+ * hook_node_access
+*/
+function reviewer_select_node_access($node, $op, $account){
+  global $user;
+  $type = is_string($node) ? $node : $node->type;
+  if(!is_string($node) && $type == 'submit_paper' && $op == 'view'){
+
+    if(is_responsible_editor($node) || is_eic_user() ||  is_reviewer($user, $node) || is_author($user, $node)){
+
+      return  NODE_ACCESS_ALLOW;
+    }
+    else{
+      return NODE_ACCESS_DENY;
+    }
+
+  }
+
+
+}

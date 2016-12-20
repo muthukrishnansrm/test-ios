@@ -1120,12 +1120,8 @@ class FilterUnitTestCase extends DrupalUnitTestCase {
     $f = filter_xss("<img src=\"jav\0a\0\0cript:alert(0)\">", array('img'));
     $this->assertNoNormalized($f, 'cript', 'HTML scheme clearing evasion -- embedded nulls.');
 
-    // @todo This dataset currently fails under 5.4 because of
-    //   https://www.drupal.org/node/1210798. Restore after it's fixed.
-    if (version_compare(PHP_VERSION, '5.4.0', '<')) {
-      $f = filter_xss('<img src=" &#14;  javascript:alert(0)">', array('img'));
-      $this->assertNoNormalized($f, 'javascript', 'HTML scheme clearing evasion -- spaces and metacharacters before scheme.');
-    }
+    $f = filter_xss('<img src=" &#14;  javascript:alert(0)">', array('img'));
+    $this->assertNoNormalized($f, 'javascript', 'HTML scheme clearing evasion -- spaces and metacharacters before scheme.');
 
     $f = filter_xss('<img src="vbscript:msgbox(0)">', array('img'));
     $this->assertNoNormalized($f, 'vbscript', 'HTML scheme clearing evasion -- another scheme.');
@@ -1390,11 +1386,11 @@ not foo://disallowed.com.
     $tests = array(
       '
 Partial URL with trailing period www.partial.com.
-E-mail with trailing comma person@example.com,
+Email with trailing comma person@example.com,
 Absolute URL with trailing question http://www.absolute.com?
 Query string with trailing exclamation www.query.com/index.php?a=!
 Partial URL with 3 trailing www.partial.periods...
-E-mail with 3 trailing exclamations@example.com!!!
+Email with 3 trailing exclamations@example.com!!!
 Absolute URL and query string with 2 different punctuation characters (http://www.example.com/q=abc).
 ' => array(
         'period <a href="http://www.partial.com">www.partial.com</a>.' => TRUE,

@@ -1,0 +1,702 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function review_management_menu() {
+  $items = array();
+
+  $items['admin/config/system/review_management'] = array(
+    'title' => 'Review Management Settings',
+    'description' => 'Configure review management system settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('review_management_config'),
+    'access arguments' => array('administer review management config'),
+    'type' => MENU_NORMAL_ITEM,
+    );
+  $items['admin/config/system/review_management/email'] = array(
+    'title' => 'Configure review management system settings.',
+    'description' => 'Configure Emails for Review System.',
+    'access arguments' => array('administer review management config'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+    );
+  $items['admin/config/system/review_management/emails'] = array(
+    'title' => 'Review Management Settings (Configure Emails)',
+    'description' => 'Configure Emails for Review System.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('review_management_config_emails'),
+    'access arguments' => array('administer review management config'),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    );
+    $items['admin/config/system/decision_templates'] = array(
+    'title' => 'Review Management Settings (Decision Letter Templates)',
+    'description' => 'Configure Decision Letter Templates for the System',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('review_management_config_templates'),
+    'access arguments' => array('administer review management config'),
+    'weight' => 0,
+    'type' => MENU_NORMAL_ITEM,
+    );
+  return $items;
+}
+
+/**
+ * hook_perm
+ */
+function review_management_permission() {
+
+  return array(
+    'administer review management config' => array(
+      'title' => t('Administer Review Management Config'),
+      'description' => t('Make changes to configuration for the review management system.'),
+    ),
+  );
+}
+
+/**
+ * Config form for decision letter templates
+ */
+function review_management_config_templates(){
+  $form['accept']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Template for Accepted Papers</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Template of the letter to be sent to authors notifying acceptance'
+      );
+    $form['accept']['accept_template'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('accept_template', ''),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+  $form['major']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Template for Major Revision Papers</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Template of the letter to be sent to authors notifying major revision'
+      );
+    $form['major']['major_template'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('major_template', ''),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+  $form['minor']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Template for Minor Revision Papers</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Template of the letter to be sent to authors notifying minor revision'
+      );
+    $form['minor']['minor_template'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('minor_template', ''),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+  $form['reject']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Template for Rejected Papers</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Template of the letter to be sent to authors notifying rejection'
+      );
+    $form['reject']['reject_template'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('reject_template', ''),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+   $form['reject_prescreening']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Template for Reject (Pre-screening) Papers</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Template of the letter to be sent to authors notifying rejection (pre-screening)'
+      );
+    $form['reject_prescreening']['reject_prescreening_template'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('reject_prescreening_template', ''),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+    return system_settings_form($form);
+}
+
+/**
+ * Config form for emails
+ */
+function review_management_config_emails(){
+  //paper bidding request email
+  $form['email_bidding']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Email for bidding request</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Email sent to editorial board memebers for bidding request'
+      );
+  $form['email_bidding']['email_bidding_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_bidding_subject', BIDDING_SUBJECT),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_bidding']['email_bidding_message'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('email_bidding_message', BIDDING_MESSAGE),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+  //submission of new paper for author
+  $form['email_author_submission']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Email to be sent to authors when a paper is submitted</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Email to be sent to authors who have and existing account'
+      );
+  $form['email_author_submission']['email_author_submission_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_author_submission_subject', AUTHOR_SUBMISSION_SUBJECT),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_author_submission']['email_author_submission_message'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('email_author_submission_message', AUTHOR_SUBMISSION_MESSAGE),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+
+  //submission of new paper for author who's account is just created
+  $form['email_author_submission_new']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email to be sent to authors when a paper is submitted',
+        '#description' => 'Email to be sent to authors with a new account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_author_submission_new']['author_new_submission_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('author_new_submission_subject', AUTHOR_SUBMISSION_NEW),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_author_submission_new']['author_new_submission_message'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('author_new_submission_message', AUTHOR_SUBMISSION_NEW_MSG),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  );
+
+/*   $form['email_bidding']  = array(
+        '#type' => 'fieldset',
+        '#title' => '<a>Email to be sent to Editorial board for bidding</a>',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => 'Email sent to all editorial board members'
+      );
+  $form['email_bidding']['email_bidding_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_bidding_subject', BIDDING_SUBJECT),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_bidding']['email_bidding_message'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('email_bidding_message', BIDDING_MESSAGE),
+    '#title' => t('Message Text'),
+    '#required' => FALSE,
+  ); */
+
+    //Email to EIC notifying new submission
+  $form['email_eic_submission']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email to be sent to eics when a paper is submitted',
+        //'#description' => 'Email to be sent to authors with a new account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_eic_submission']['eic_submission_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('eic_submission_subject', SUBMISSION_EIC_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_eic_submission']['eic_submission_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('eic_submission_message', SUBMISSION_EIC_MSG),
+    '#required' => FALSE,
+  );
+
+  //Email to editors for revising decision letter
+
+  $form['revise_decision']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email Sent to editors when decision letter needs revision',
+        //'#description' => 'Email to be sent to authors with a new account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['revise_decision']['revise_decision_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('revise_decision_subject', REVISE_DEC_LETTER_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['revise_decision']['revise_decision_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('revise_decision_message', REVISE_DEC_LETTER_MSG),
+    '#required' => FALSE,
+  );
+
+
+    //Email for editor assignment
+    $form['email_editor_assn']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email editor when assigned to a paper',
+        //'#description' => 'Email to be sent to authors with a new account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_editor_assn']['email_editor_assn_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_editor_assn_subject', SUBMISSION_EDITOR_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_editor_assn']['email_editor_assn_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_editor_assn_message', SUBMISSION_EDITOR_MSG),
+    '#required' => FALSE,
+  );
+  // Email to reviewer for assignment (existing accounts)
+
+  $form['email_reviewer_assn']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to reviewers when first invited',
+        '#description' => 'Email to be sent to reviewers with an existing account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_reviewer_assn']['email_reviewer_assn_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_reviewer_assn_subject', REVIEWER_ASSIGNMENT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_reviewer_assn']['email_reviewer_assn_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_reviewer_assn_message', REVIEWER_ASSIGNMENT_MSG),
+    '#required' => FALSE,
+  );
+
+  // Email to reviewer for assignment (new accounts)
+
+   $form['email_reviewer_assn_new']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to reviewers when first invited with new account',
+        '#description' => 'Email to be sent to reviewers with new account',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_reviewer_assn_new']['email_reviewer_new_assn_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_reviewer_new_assn_subject', REVIEWER_ASSIGNMENT_SUB_NEW),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_reviewer_assn_new']['email_reviewer_new_assn_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_reviewer_new_assn_message', REVIEWER_ASSIGNMENT_MSG_NEW),
+    '#required' => FALSE,
+  );
+
+  //Email to Eics and Editor. Review received.
+
+  $form['email_review_rec']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email to eics and editors when a review is received',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_review_rec']['email_review_rec_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_review_rec_subject', REV_SUBMIT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_review_rec']['email_review_rec_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_review_rec_message', REVIEW_SUBMIT_MSG),
+    '#required' => FALSE,
+  );
+//Email when min number of reviews are received
+  $form['email_min_rev']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent when minimum number of reviews have been added',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_min_rev']['email_min_rev_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_min_rev_subject', REV_DEC_EDITOR_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_min_rev']['email_min_rev_subject_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_min_rev_subject_message', REV_DEC_EDITOR_MSG),
+    '#required' => FALSE,
+  );
+//Decision letter needed to EIC
+  $form['email_min_eic']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email to eics when decision letter is needed',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_min_eic']['email_min_eic_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_min_eic_subject', REV_DEC_EIC_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_min_eic']['email_min_eic_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_min_eic_message', REV_DEC_EIC_MSG),
+    '#required' => FALSE,
+  );
+//Notification to EIC when decision letter has been submitted by Editor.
+$form['email_decision_draft']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Notification to EIC when decision letter has been submitted by Editor.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_decision_draft']['email_decision_draft_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_decision_draft_subject', REV_DEC_LETTER_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_decision_draft']['email_decision_draft_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_decision_draft_message', REV_DEC_LETTER_MSG),
+    '#required' => FALSE,
+  );
+//Decision letter sent to the authors
+
+$form['email_author_dec']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to authors after decision is made.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_author_dec']['email_author_dec_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_author_dec_subject', REV_DEC_APR_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_author_dec']['email_author_dec_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_author_dec_message', REV_DEC_APR_MSG),
+    '#required' => FALSE,
+  );
+//Appreciation email to reviewers for submitting the review. Notification sent after approval of decision.
+$form['email_rev_dec']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to reviewers after decision is made.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_rev_dec']['email_rev_dec_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_rev_dec_subject', REV_DEC_APR_REV_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_rev_dec']['email_rev_dec_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_rev_dec_message', REV_DEC_APR_REV_MSG),
+    '#required' => FALSE,
+  );
+
+//Letter sent to Editor after decision has been approved.
+  $form['email_editor_dec']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to editors after decision is made.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_editor_dec']['email_editor_dec_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_editor_dec_subject', REV_DEC_APR_EDITOR_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_editor_dec']['email_editor_dec_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_editor_dec_message', REV_DEC_APR_EDITOR_MSG),
+    '#required' => FALSE,
+  );
+
+//Notification to Eic and Editor once the reviewer accepts the invitation
+  $form['email_rev_accept']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to editors/eics when reviewer accepts invitation.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_rev_accept']['email_rev_accept_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_rev_accept_subject', REV_ACCEPT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_rev_accept']['email_rev_accept_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_rev_accept_message', REV_ACCEPT_MSG),
+    '#required' => FALSE,
+  );
+
+
+//Notification to Eic and Editor once the reviewer rejects the invitation.
+  $form['email_rev_reject']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Email sent to editors/eics when reviewer rejects invitation.',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_rev_reject']['email_rev_reject_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_rev_reject_subject', REV_REJECT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_rev_reject']['email_rev_reject_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_rev_reject_message', REV_REJECT_MSG),
+    '#required' => FALSE,
+  );
+//Review reminder
+
+  $form['email_rev_reminder']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Review reminder sent to reviewers',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_rev_reminder']['email_rev_reminder_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_rev_reminder_subject', REV_REMINDER_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_rev_reminder']['email_rev_reminder_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_rev_reminder_message', REV_REMINDER_MSG),
+    '#required' => FALSE,
+  );
+//Editor reminder
+//Review reminder
+
+  $form['email_editor_reminder']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Reminders sent to editors',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+  $form['email_editor_reminder']['email_editor_reminder_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_editor_reminder_subject', EDITOR_REMINDER_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_editor_reminder']['email_editor_reminder_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_editor_reminder_message', EDITOR_REMINDER_MSG),
+    '#required' => FALSE,
+  );
+  $form['email_editor_accept']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Editor agrees to review',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+   $form['email_editor_accept']['email_editor_accept_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_editor_accept_subject', EDITOR_ACCEPT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_editor_accept']['email_editor_accept_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_editor_accept_message', EDITOR_ACCEPT_MSG),
+    '#required' => FALSE,
+  );
+
+  $form['email_editor_reject']  = array(
+        '#type' => 'fieldset',
+        '#title' => 'Editor refuses to review',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+   $form['email_editor_reject']['email_editor_reject_subject'] = array(
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#default_value' => variable_get('email_editor_reject_subject', EDITOR_REJECT_SUB),
+    '#title' => t('Subject'),
+    '#required' => FALSE,
+  );
+  $form['email_editor_reject']['email_editor_reject_message'] = array(
+    '#type' => 'textarea',
+    '#title'=> 'Message',
+    '#default_value' => variable_get('email_editor_reject_message', EDITOR_REJECT_MSG),
+    '#required' => FALSE,
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Config form for review management
+ * Use get functions from reviewer_select module
+ */
+function review_management_config() {
+  $form = array();
+  $form['review_management_copy_eic'] = array(
+    '#type' => 'select',
+    '#title' => t('Copy Editors in Chief in all emails'),
+    '#default_value' => variable_get('review_management_copy_eic', 0),
+    '#options' => array(
+          0 => t('No'),
+         1 => t('Yes'),
+       ),
+    '#description' => t("Select Yes to copy all emails to editors in chief."),
+    '#required' => TRUE,
+  );
+  $form['review_management_closed_review'] = array(
+    '#type' => 'select',
+    '#title' => t('Closed/Open review management.'),
+    '#default_value' => variable_get('review_management_closed_review', 0),
+    '#options' => array(
+         0 => t('Closed'),
+         1 => t('Open'),
+       ),
+    '#description' => t("If Closed all review activities will be hidden from non-editor users."),
+    '#required' => TRUE,
+  );
+  $form['review_management_publisher_email'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_publisher_email', ''),
+    '#title' => t('Publisher\'s email address'),
+    '#description' => t("Please put the publisher's email address for automatically sending camera-ready files."),
+    '#required' => FALSE,
+  );
+  $form['review_management_eb_email'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_eb_email', ''),
+    '#title' => t('Editorial board group email address'),
+    '#description' => t("Please put the editorial boards mailing address for sending bidding requests."),
+    '#required' => FALSE,
+  );
+  $form['review_management_email_notice'] = array(
+    '#type' => 'textarea',
+    '#default_value' => variable_get('review_management_email_notice', SWJ_NOTICE),
+    '#title' => t('Email Notice'),
+    '#description' => t("Notice that will be attached below all emails"),
+    '#required' => FALSE,
+  );
+
+  $form['fset_reminder'] = array(
+          '#type' => 'fieldset',
+          '#title' => 'Configure when automatic reminders should be sent to reviewers'
+      );
+  $form['fset_reminder']['review_management_review_reminder'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_review_reminder', 7),
+    '#title' => t('Number of days after the reviewer has been invited'),
+    '#description' => t("The reviewer has been invited but he/she has not accepted/rejected the invite"),
+    '#required' => FALSE,
+  );
+  $form['fset_reminder']['review_management_reminder_first'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_first', 30),
+    '#title' => t('Number of days after the reviewer has accepted the invitation to review'),
+    '#description' => t("The reviewer has accepted the invitation to review but has not submitted the review."),
+    '#required' => FALSE,
+  );
+  $form['fset_reminder']['review_management_review_followup'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_followup', 7),
+    '#title' => t('Number of days after the reviewer was sent the last reminder'),
+    '#description' => t("This is the followup reminder after the first reminder has been sent but no action taken yet"),
+    '#required' => FALSE,
+  );
+
+   $form['fset_reminder_editor'] = array(
+          '#type' => 'fieldset',
+          '#title' => 'Configure when automatic reminders should be sent to assigned editors'
+      );
+  $form['fset_reminder_editor']['review_management_edit_reminder'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_edit_reminder', 7),
+    '#title' => t('Number of days after the editor has been added to the paper'),
+    '#description' => t(""),
+    '#required' => FALSE,
+  );
+
+  $form['fset_reminder_editor']['review_management_edit_followup'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('review_management_edit_followup', 7),
+    '#title' => t('Number of days after the editor was sent the last reminder'),
+    '#description' => t("This is the followup reminder after the first reminder has been sent but no action taken yet"),
+    '#required' => FALSE,
+  );
+
+
+  return system_settings_form($form);
+}

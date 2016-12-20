@@ -1,0 +1,489 @@
+<?php
+
+function email_form_menu() {
+
+
+	$items['swj/email'] = array(
+		'title' => t('Email'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('email_form_form'),
+		'access callback' => 'email_callback',
+		'type' => MENU_CALLBACK
+	);
+
+    $items['swj/rev_rem'] = array(
+            'title' => t('Send review reminder'),
+            'page callback' => 'drupal_get_form',
+            'page arguments' => array('rem_form_form'),
+            'access callback' => 'email_callback',
+            'type' => MENU_CALLBACK
+    );
+
+	$items['swj/a'] = array(
+		'title' => t('Email'),
+		'page callback' => 'foo',
+		'access callback' => 'a_callback',
+		'type' => MENU_CALLBACK
+	);
+	$items['node/swj/edit_review'] = array(
+		'title' => t('Edit Review'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('edit_review_form'),
+		'access callback' => 'edit_review_callback',
+		'type' => MENU_CALLBACK
+	);
+	return $items;
+}
+
+
+
+function email_callback() {
+	global $user;
+
+	if ($user->uid == 0)
+		return false;
+
+	return true;
+}
+
+function a_callback() {
+	global $user;
+
+	if ($user->uid == 0)
+		return false;
+
+	return true;
+}
+
+function edit_review_callback() {
+	global $user;
+
+	if ($user->uid == 0)
+		return false;
+
+	// count number of reviews in db
+	$query = db_select('paper_review', 'p');
+	$query->condition('p.nid', arg(3), '=');
+	$query->condition('p.vid', arg(4), '=');
+	$query->condition('p.uid', arg(5), '=');
+	$results = $query->countQuery()->execute()->fetchField();
+
+	if ($results != 1)
+		return false;
+
+	return true;
+}
+
+/*
+ * Returns an array of arrays of size 3, contains sets of nid, vid, uid.
+ */
+function get_arg_groups() {
+	$groups = array();
+	$i = 2;
+	$loop = true;
+	while (arg($i) && $loop) {
+
+		if (!arg($i) || !arg($i + 1) || !arg($i + 2)) {
+			$loop = false;
+		} else {
+			$groups[] = array(
+				arg($i),
+				arg($i + 1),
+				arg($i + 2)
+			);
+		}
+
+		$i += 3;
+	}
+
+	return $groups;
+}
+
+function email_form_gen($name, $email, $nid, $vid){
+  $form['to_name'] = array(
+		'#title' => 'To',
+		'#type' => 'hidden',
+		'#value' => $name,
+	);
+	$form['to_email'] = array(
+		'#title' => 'To',
+		'#type' => 'hidden',
+		'#value' => $email,
+	);
+    $form['nid'] = array(
+        '#type' => 'hidden',
+        '#value' => $nid,
+        );
+    $form['vid'] = array(
+        '#type' => 'hidden',
+        '#value' => $vid,
+        );
+	$form['to_cc'] = array(
+		'#title' => 'Add Additional Recipients',
+		'#type' => 'textfield',
+		'#description' => 'enter email addresses separated by commas',
+		'#prefix' => '<b>To: </b>' . str_replace(',', ', ', $email),
+	);
+	$form['subject'] = array(
+		'#title' => 'Subject',
+		'#type' => 'textfield',
+		'#required' => TRUE,
+	    '#default_value' => replace_email_tokens($nid, GENERIC_SUB),
+	);
+	
+	 $form['attachment'] = array(
+        '#title' => t('Upload the document'),
+		'#type' => 'managed_file',
+		'#upload_location' => 'public://author_document',
+		'#default_value' => $attachment,
+        '#description' => t('Supports only .pdf .doc .docx .zip files'),
+         '#upload_validators' => array(
+        'file_validate_extensions' => array('pdf doc docx zip'),
+	   	 
+      ),
+    );
+	
+
+	$form['message'] = array(
+		'#title' => 'Message',
+		'#type' => 'textarea',
+		'#description' => 'Enter your message here.',
+		'#cols' => 40,
+		'#rows' => 5,
+		'#required' => TRUE,
+	    '#default_value' => replace_email_tokens($nid, GENERIC_MSG),
+	);
+
+	$form['submit'] = array(
+		'#title' => 'Submit',
+		'#type' => 'submit',
+		'#value' => t('Send')
+	);
+
+	return $form;
+}
+
+function email_form_form() {
+	$query = db_select('users', 'u');
+	$query -> condition('u.uid', explode(',', arg(4)), 'in');
+	$query -> fields('u', array(
+		'mail',
+		'name'
+	));
+	$results = $query -> execute();
+
+	$email = '';
+	$name = '';
+	$first = true;
+	foreach ($results as $result) {
+		if ($first) {
+			$email .= $result -> mail;
+			$first = false;
+			continue;
+		}
+		$email .= ',' . $result -> mail;
+		$name = $result -> name;
+	}
+  return email_form_gen($name, $email, arg(2), arg(3));
+}
+
+function rem_form_form() {
+        module_load_include('module', 'testaction', 'testaction');
+	$query = db_select('users', 'u');
+	$query -> condition('u.uid', explode(',', arg(4)), 'in');
+	$query -> fields('u', array(
+		'mail',
+		'name'
+	));
+	$results = $query -> execute();
+
+	$email = '';
+	$name = '';
+	$first = true;
+	foreach ($results as $result) {
+		if ($first) {
+			$email .= $result -> mail;
+                        $name = $result->name;
+			$first = false;
+			continue;
+		}
+		$email .= ',' . $result -> mail;
+		$name = $result -> name;
+	}
+        $node = node_load(arg(2),arg(3));
+        $sub = variable_get('email_rev_reminder_subject', REV_REMINDER_SUB);
+        $msg = variable_get('email_rev_reminder_message', REV_REMINDER_MSG);
+        $editor = user_load(get_responsible_editor($node));
+         $sub = str_replace('{{tracking_number}}', $node->nid . '-' . $node->vid, $sub);
+         $msg = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $msg);
+         $msg = str_replace('{{reviewer}}', $name, $msg);
+         $msg = str_replace('{{username}}', $name, $msg);
+         $msg = str_replace('{{authors}}', get_author_names($node), $msg);
+         $msg = str_replace('{{url}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE)), $msg);
+         $msg = str_replace('{{title}}', $node->title, $msg);
+         $msg = str_replace('{{editor}}', $editor->name,$msg);
+         $msg = str_replace('{{editor_email}}', $editor->mail,$msg);
+	$form['to_name'] = array(
+		'#title' => 'To',
+		'#type' => 'hidden',
+		'#value' => $name,
+	);
+	$form['to_email'] = array(
+		'#title' => 'To',
+		'#type' => 'hidden',
+		'#value' => $email,
+	);
+
+	$form['to_cc'] = array(
+		'#title' => 'Recipient (s)',
+		'#type' => 'textfield',
+                '#default_value' => $email,
+		'#description' => 'You can enter additional email addresses separated by commas',
+	//	'#prefix' => '<b>To: </b>' . $email,
+	);
+	$form['subject'] = array(
+		'#title' => 'Subject',
+		'#type' => 'textfield',
+                '#default_value' => $sub,
+		'#required' => TRUE,
+	);
+
+	$form['message'] = array(
+		'#title' => 'Message',
+		'#type' => 'textarea',
+                '#default_value' => $msg,
+		'#description' => 'Enter your message here.',
+		'#cols' => 40,
+		'#rows' => 20,
+		'#required' => TRUE,
+	);
+
+	$form['submit'] = array(
+		'#title' => 'Submit',
+		'#type' => 'submit',
+		'#value' => t('Send')
+	);
+
+	return $form;
+}
+
+
+function rem_form_form_submit($form, &$form_state) {
+        global $user;
+        module_load_include('module', 'testaction', 'testaction');
+        $params['subject'] = $form_state['values']['subject'];
+        $params['message'] = $form_state['values']['message'];
+        $node = node_load(arg(2), arg(3));
+        $editor = user_load(get_responsible_editor($node));
+
+        $params['cc'] = $editor->mail;
+        $params['Reply-to'] = $user->mail;
+        drupal_mail('testaction', 'one-one', $form_state['values']['to_cc'], '', $params);
+
+        //update actions table
+        update_actions_table(4, arg(2), arg(3), '<b>Reminder Sent<br/>To :</b> ' . $form_state['values']['to_email'] . ',' . $form_state['values']['to_cc'] . '<br/><b>subject :</b> ' . $params['subject'] . '<br/> <b>message: </b>' . $params['message'], $user -> uid, arg(4));
+        $form_state['redirect'] = 'node/' . arg(2);
+        drupal_set_message(t('Reminder has been sent.'));
+
+}
+
+function email_form_gen_submit($form, &$form_state){
+  email_form_form_submit($form, $form_state);
+}
+
+function email_form_form_submit($form, &$form_state) {
+	global $user;
+    module_load_include('module', 'testaction', 'testaction');
+	$params['subject'] = $form_state['values']['subject'];
+	$params['attachment'] = $form_state['values']['attachment'];
+	$params['message'] = $form_state['values']['message'];
+	$params['Reply-to'] = $user->mail;
+	$emails = $form_state['values']['to_email'];
+	if(isset($form_state['values']['to_cc']) && $form_state['values']['to_cc'] != ''){
+	  $emails .= ',' . $form_state['values']['to_cc'];
+	}
+	drupal_mail('testaction', 'one-one', $emails, '', $params);
+
+	//update actions table
+
+	update_actions_table(4, $form_state['values']['nid'], $form_state['values']['vid'], '<b>Email Sent<br/>To :</b> ' . $form_state['values']['to_email'] . ',' . $form_state['values']['to_cc'] . '<br/><b>subject :</b> ' . $params['subject'] . '<br/> <b>message: </b>' . $params['message'], $user -> uid, '');
+	$form_state['redirect'] = 'node/' . $form_state['values']['nid'];
+	drupal_set_message(t('Email has been sent.'));
+
+}
+
+function send_rev_reminder($nid, $vid, $uid){
+        module_load_include('module', 'testaction', 'testaction');
+        //watchdog('args passed 1',$nid);
+        //watchdog('args passed 2', $vid);
+        //watchdog('args passed 3', $uid);
+        $query = db_select('users', 'u');
+        $query -> condition('u.uid', $uid);
+        $query -> fields('u', array(
+                'mail',
+                'name'
+        ));
+        $results = $query -> execute();
+
+        $email = '';
+        $name = '';
+        $first = true;
+        foreach ($results as $result) {
+                if ($first) {
+                        $email .= $result -> mail;
+                        $name   = $result->name;
+                        $first = false;
+                        continue;
+                }
+                $email .= ',' . $result -> mail;
+                $name = $result -> name;
+        }
+        //watchdog('name of the user', $name);
+        //watchdog('email of the user', $email);
+        $params['subject'] = variable_get('email_rev_reminder_subject', REV_REMINDER_SUB);
+        $params['message'] = variable_get('email_rev_reminder_message', REV_REMINDER_MSG);
+	drupal_mail('testaction', 'one-one', $email, '', $params);
+        global $user;
+        update_actions_table(4, $nid, $vid, '<b>Review reminder sent to </b><br/>'. $name . ' (' . $email  . ')', $user -> uid, $uid);
+        //$form_state['redirect'] = 'node/' . arg(2);
+        drupal_set_message(t('A Reminder has been sent to '. $name .'.'));
+        drupal_goto('node/'. $nid);
+	//drupal_set_message(t('Reminder has been sent to '. $name .'.'));
+
+}
+
+function foo() {
+	$query = db_select('swj_actions', 'p');
+	$query -> fields('p', array(
+		'action_by',
+		'action_date',
+		'type',
+		'description'
+	));
+	$query = $query -> extend('PagerDefault') -> limit(2);
+	$query -> extend('TableSort');
+	$results = $query -> execute();
+
+	$header = array(
+		'date' => array('data' => t('Action Date')),
+		'desc' => array('data' => t('Description')),
+		'user' => array('data' => t('Action By')),
+	);
+	$rows = array();
+	$count = 0;
+	foreach ($results as $result) {
+		$count++;
+		$rows[] = array(
+			'date' => $result -> action_date,
+			'desc' => $result -> description,
+			'user' => $result -> name
+		);
+	}
+
+	$build['table'] = array(
+		'#theme' => 'table',
+		'#header' => $header,
+		'#rows' => $rows,
+		'#attributes' => array(),
+	);
+
+	$build['pager'] = array('#theme' => 'pager', );
+	return $build;
+
+}
+
+function edit_review_form($form, &$form_state) {
+	$query = db_select('paper_review', 'p');
+	$query -> condition('p.nid', arg(3), '=');
+	$query -> condition('p.vid', arg(4), '=');
+	$query -> condition('p.uid', arg(5), '=');
+	 $query -> fields('p', array(
+      'comment',
+      'comment_format',
+      'suggestion',
+      'p_comment',
+      'p_comment_format',
+      'created',
+      'anon',
+      'impression',
+      'technical_quality',
+      'originality',
+      'bibliography',
+      'abstract_adequacy',
+      'introduction',
+      'organization',
+      'english',
+      'presentation'
+  ));
+
+	$results = $query->execute();
+	$node = node_load(arg(3));
+	$reviewer = user_load(arg(5));
+	$form = review_form($form, $form_state, $node ,$reviewer, 'admin_edit');
+
+	$comment = "";
+	$p_comment = "";
+	$anonm = 0;
+	$suggestion = '';
+	foreach ($results as $result) {
+		$comment = $result -> comment;
+		$p_comment = $result -> p_comment;
+		$anonm = $result -> anon;
+		$impression = $result->impression;
+		$suggestion = $result -> suggestion;
+		$quality = $result->technical_quality;
+        $originality = $result->originality;
+        $bibliography = $result->bibliography;
+        $abstract = $result->abstract_adequacy;
+        $introduction = $result -> introduction;
+        $organization = $result->organization;
+        $english = $result->english;
+        $presentation = $result->presentation;
+	}
+
+	$form['fset_review']['impression']['#default_value'] = $impression;
+	$form['fset_review']['suggestion']['#default_value'] = $suggestion;
+	$form['fset_review']['review_comments']['#default_value'] = $comment;
+
+
+	$form['fset_review']['comment_for_edit']['#default_value'] = $p_comment;
+
+
+	if ($anonm == 1) {
+		$form['fset_review']['anonym']['#attributes'] = array('checked' => 'checked');
+	}
+	$form['fset_review']['quality']['#default_value'] = $quality;
+	$form['fset_review']['originality']['#default_value'] = $originality;
+    $form['fset_review']['bib_adequacy']['#default_value'] = $bibliography;
+    $form['fset_review']['abstract']['#default_value'] = $abstract;
+    $form['fset_review']['background']['#default_value'] = $introduction;
+    $form['fset_review']['organization']['#default_value'] = $organization;
+    $form['fset_review']['english']['#default_value'] = $english;
+    $form['fset_review']['overall_presentation']['#default_value'] = $presentation;
+     $form['fset_review']['submit'] = array(
+        '#title' => 'Submit',
+        '#type' => 'submit',
+        '#value' => t('Submit Review'),
+        '#prefix' => '<br/>',
+
+    );
+     $form['fset_review']['#title'] = 'Edit Review';
+	drupal_add_css('#edit-fset-review fieldset { display: none; }', array('type' => 'inline'));
+
+	return $form;
+}
+
+function edit_review_form_validate($form, &$form_state) {
+
+	return true;
+}
+
+function edit_review_form_submit($form, &$form_state) {
+
+	$uid = $form_state['values']['reviewer'];
+
+	update_review(FALSE, $form_state, user_load($uid));
+
+	$form_state['redirect'] = 'node/' . arg(3);
+	drupal_set_message("Review Updated successfully");
+}

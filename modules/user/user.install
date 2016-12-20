@@ -49,9 +49,6 @@ function user_schema() {
         'columns' => array('uid' => 'uid'),
       ),
     ),
-    'indexes' => array(
-      'uid_module' => array('uid', 'module'),
-    ),
   );
 
   $schema['role_permission'] = array(
@@ -225,7 +222,7 @@ function user_schema() {
         'length' => 254,
         'not null' => FALSE,
         'default' => '',
-        'description' => 'E-mail address used for initial account creation.',
+        'description' => 'Email address used for initial account creation.',
       ),
       'data' => array(
         'type' => 'blob',
@@ -589,7 +586,7 @@ function user_update_7005(&$sandbox) {
     'length' => 254,
     'not null' => FALSE,
     'default' => '',
-    'description' => 'E-mail address used for initial account creation.',
+    'description' => 'Email address used for initial account creation.',
   );
   db_drop_index('users', 'mail');
   db_change_field('users', 'mail', 'mail', $mail_field, array('indexes' => array('mail' => array('mail'))));
@@ -913,15 +910,6 @@ function user_update_7018() {
   }
 }
 
-/**
- * Ensure there is a combined index on {authmap}.uid and {authmap}.module.
- */
-function user_update_7019() {
-  // Check first in case it was already added manually.
-  if (!db_index_exists('authmap', 'uid_module')) {
-    db_add_index('authmap', 'uid_module', array('uid', 'module'));
-  }
-}
 /**
  * @} End of "addtogroup updates-7.x-extra".
  */

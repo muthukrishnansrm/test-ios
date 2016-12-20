@@ -424,7 +424,7 @@ function user_load_by_name($name) {
 function user_save($account, $edit = array(), $category = 'account') {
   $transaction = db_transaction();
   try {
-    if (isset($edit['pass']) && strlen(trim($edit['pass'])) > 0) {
+    if (!empty($edit['pass'])) {
       // Allow alternate password hashing schemes.
       require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
       $edit['pass'] = user_hash_password(trim($edit['pass']));
@@ -791,7 +791,7 @@ function user_role_permissions($roles = array()) {
  *   (optional) The account to check, if not given use currently logged in user.
  *
  * @return
- *   Boolean TRUE if the user has the requested permission.
+ *   Boolean TRUE if the current user has the requested permission.
  *
  * All permission checks in Drupal should go through this function. This
  * way, we guarantee consistent behavior, and ensure that the superuser
@@ -1060,23 +1060,23 @@ function user_account_form(&$form, &$form_state) {
     '#weight' => -10,
   );
   // Only show name field on registration form or user can change own username.
-  $form['account']['name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Username'),
-    '#maxlength' => USERNAME_MAX_LENGTH,
-    '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
-    '#required' => TRUE,
-    '#attributes' => array('class' => array('username')),
-    '#default_value' => (!$register ? $account->name : ''),
-    '#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
-    '#weight' => -10,
-  );
+ // $form['account']['name'] = array(
+  //  '#type' => 'textfield',
+   // '#title' => t('Username'),
+   // '#maxlength' => USERNAME_MAX_LENGTH,
+   // '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
+   // '#required' => TRUE,
+   // '#attributes' => array('class' => array('username')),
+   // '#default_value' => (!$register ? $account->name : ''),
+   // '#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
+   // '#weight' => -10,
+ // );
 
   $form['account']['mail'] = array(
     '#type' => 'textfield',
-    '#title' => t('E-mail address'),
+    '#title' => t('Email'),
     '#maxlength' => EMAIL_MAX_LENGTH,
-    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#description' => t('All emails from the system will be sent to this address. The email address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by email.'),
     '#required' => TRUE,
     '#default_value' => (!$register ? $account->mail : ''),
   );
@@ -1232,7 +1232,7 @@ function user_validate_current_pass(&$form, &$form_state) {
     // that prevent them from being empty if they are changed.
     if ((strlen(trim($form_state['values'][$key])) > 0) && ($form_state['values'][$key] != $account->$key)) {
       require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
-      $current_pass_failed = strlen(trim($form_state['values']['current_pass'])) == 0 || !user_check_password($form_state['values']['current_pass'], $account);
+      $current_pass_failed = empty($form_state['values']['current_pass']) || !user_check_password($form_state['values']['current_pass'], $account);
       if ($current_pass_failed) {
         form_set_error('current_pass', t("Your current password is missing or incorrect; it's required to change the %name.", array('%name' => $name)));
         form_set_error($key);
@@ -1755,11 +1755,9 @@ function user_menu() {
 
   $items['admin/people/create'] = array(
     'title' => 'Add user',
-    'page callback' => 'user_admin',
     'page arguments' => array('create'),
     'access arguments' => array('administer users'),
     'type' => MENU_LOCAL_ACTION,
-    'file' => 'user.admin.inc',
   );
 
   // Administration pages.
@@ -2150,17 +2148,11 @@ function user_login_default_validators() {
   return array('user_login_name_validate', 'user_login_authenticate_validate', 'user_login_final_validate');
 }
 
-function project_authentication_form_user_login_alter( &$form, $form_state )
-{
-    $form['#validate'] = array(  'user_login_name_validate', 'project_authentication_login_validate', 'user_login_final_validate' );
-} 
-
 /**
  * A FAPI validate handler. Sets an error if supplied username has been blocked.
  */
 function user_login_name_validate($form, &$form_state) {
-	print_r("Test-validate");
-    if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
+  if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
     // Blocked in user administration.
     form_set_error('name', t('The username %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
   }
@@ -2173,7 +2165,7 @@ function user_login_name_validate($form, &$form_state) {
  */
 function user_login_authenticate_validate($form, &$form_state) {
   $password = trim($form_state['values']['pass']);
-  if (!empty($form_state['values']['name']) && strlen(trim($password)) > 0) {
+  if (!empty($form_state['values']['name']) && !empty($password)) {
     // Do not allow any login from the current user's IP if the limit has been
     // reached. Default is 50 failed attempts allowed in one hour. This is
     // independent of the per-user limit to catch attempts from one IP to log
@@ -2264,7 +2256,7 @@ function user_login_final_validate($form, &$form_state) {
  */
 function user_authenticate($name, $password) {
   $uid = FALSE;
-  if (!empty($name) && strlen(trim($password)) > 0) {
+  if (!empty($name) && !empty($password)) {
     $account = user_load_by_name($name);
     if ($account) {
       // Allow alternate password hashing schemes.
@@ -2332,16 +2324,11 @@ function user_login_submit($form, &$form_state) {
  * populated and login tasks are performed.
  */
 function user_external_login_register($name, $module) {
-	//print_r("Test-user_external");
-	
-   // $name='muthukrishnan.srrrk@gmail.com';
-   // $pass = 'welcome123$';
   $account = user_external_load($name);
   if (!$account) {
     // Register this new user.
     $userinfo = array(
       'name' => $name,
-	  'mail' => $name,
       'pass' => user_password(),
       'init' => $name,
       'status' => 1,
@@ -3703,12 +3690,11 @@ function user_node_load($nodes, $types) {
   $user_fields = db_query("SELECT uid, name, picture, data FROM {users} WHERE uid IN (:uids)", array(':uids' => $uids))->fetchAllAssoc('uid');
 
   // Add these values back into the node objects.
-  // Changes done by muthu
- // foreach ($uids as $nid => $uid) {
-   // $nodes[$nid]->name = $user_fields[$uid]->name;
-  //  $nodes[$nid]->picture = $user_fields[$uid]->picture;
-  //  $nodes[$nid]->data = $user_fields[$uid]->data;
-  //}
+  foreach ($uids as $nid => $uid) {
+    $nodes[$nid]->name = $user_fields[$uid]->name;
+    $nodes[$nid]->picture = $user_fields[$uid]->picture;
+    $nodes[$nid]->data = $user_fields[$uid]->data;
+  }
 }
 
 /**

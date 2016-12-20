@@ -1,0 +1,5 @@
+name = "email"
+description = "form for sending an email"
+package = swj
+core = 7.x
+files[] = email_form.module

@@ -26,14 +26,14 @@ function update_settings($form) {
 
   $form['update_check_disabled'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Check for updates of disabled and uninstalled modules and themes'),
+    '#title' => t('Check for updates of disabled modules and themes'),
     '#default_value' => variable_get('update_check_disabled', FALSE),
   );
 
   $notify_emails = variable_get('update_notify_emails', array());
   $form['update_notify_emails'] = array(
     '#type' => 'textarea',
-    '#title' => t('E-mail addresses to notify when updates are available'),
+    '#title' => t('Email addresses to notify when updates are available'),
     '#rows' => 4,
     '#default_value' => implode("\n", $notify_emails),
     '#description' => t('Whenever your site checks for available updates and finds new releases, it can notify a list of users via e-mail. Put each address on a separate line. If blank, no e-mails will be sent.'),
@@ -41,7 +41,7 @@ function update_settings($form) {
 
   $form['update_notification_threshold'] = array(
     '#type' => 'radios',
-    '#title' => t('E-mail notification threshold'),
+    '#title' => t('Email notification threshold'),
     '#default_value' => variable_get('update_notification_threshold', 'all'),
     '#options' => array(
       'all' => t('All newer versions'),
@@ -98,11 +98,10 @@ function update_settings_validate($form, &$form_state) {
  * Form submission handler for update_settings().
  *
  * Also invalidates the cache of available updates if the "Check for updates of
- * disabled and uninstalled modules and themes" setting is being changed. The
- * available updates report needs to refetch available update data after this
- * setting changes or it would show misleading things (e.g., listing the
- * disabled projects on the site with the "No available releases found"
- * warning).
+ * disabled modules and themes" setting is being changed. The available updates
+ * report needs to refetch available update data after this setting changes or
+ * it would show misleading things (e.g., listing the disabled projects on the
+ * site with the "No available releases found" warning).
  *
  * @see update_settings_validate()
  */

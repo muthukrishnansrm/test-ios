@@ -322,14 +322,6 @@ class SimpleTestFunctionalTest extends DrupalWebTestCase {
  * Test internal testing framework browser.
  */
 class SimpleTestBrowserTestCase extends DrupalWebTestCase {
-
-  /**
-   * A flag indicating whether a cookie has been set in a test.
-   *
-   * @var bool
-   */
-  protected static $cookieSet = FALSE;
-
   public static function getInfo() {
     return array(
       'name' => 'SimpleTest browser',
@@ -388,46 +380,6 @@ EOF;
     $urls = $this->xpath('//a[text()=:text]', array(':text' => 'A second "even more weird" link, in memory of George O\'Malley'));
     $this->assertEqual($urls[0]['href'], 'link2', 'Match with mixed single and double quotes.');
   }
-
-  /**
-   * Tests that cookies set during a request are available for testing.
-   */
-  public function testCookies() {
-    // Check that the $this->cookies property is populated when a user logs in.
-    $user = $this->drupalCreateUser();
-    $edit = array('name' => $user->name, 'pass' => $user->pass_raw);
-    $this->drupalPost('<front>', $edit, t('Log in'));
-    $this->assertEqual(count($this->cookies), 1, 'A cookie is set when the user logs in.');
-
-    // Check that the name and value of the cookie match the request data.
-    $cookie_header = $this->drupalGetHeader('set-cookie', TRUE);
-
-    // The name and value are located at the start of the string, separated by
-    // an equals sign and ending in a semicolon.
-    preg_match('/^([^=]+)=([^;]+)/', $cookie_header, $matches);
-    $name = $matches[1];
-    $value = $matches[2];
-
-    $this->assertTrue(array_key_exists($name, $this->cookies), 'The cookie name is correct.');
-    $this->assertEqual($value, $this->cookies[$name]['value'], 'The cookie value is correct.');
-
-    // Set a flag indicating that a cookie has been set in this test.
-    // @see SimpleTestBrowserTestCase::testCookieDoesNotBleed().
-    self::$cookieSet = TRUE;
-  }
-
-  /**
-   * Tests that the cookies from a previous test do not bleed into a new test.
-   *
-   * @see SimpleTestBrowserTestCase::testCookies().
-   */
-  public function testCookieDoesNotBleed() {
-    // In order for this test to be effective it should always run after the
-    // testCookies() test.
-    $this->assertTrue(self::$cookieSet, 'Tests have been executed in the expected order.');
-    $this->assertEqual(count($this->cookies), 0, 'No cookies are present at the start of a new test.');
-  }
-
 }
 
 class SimpleTestMailCaptureTestCase extends DrupalWebTestCase {
@@ -459,19 +411,19 @@ class SimpleTestMailCaptureTestCase extends DrupalWebTestCase {
 
     // Before we send the e-mail, drupalGetMails should return an empty array.
     $captured_emails = $this->drupalGetMails();
-    $this->assertEqual(count($captured_emails), 0, 'The captured e-mails queue is empty.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 0, 'The captured e-mails queue is empty.', 'Email');
 
     // Send the e-mail.
     $response = drupal_mail_system('simpletest', 'drupal_mail_test')->mail($message);
 
     // Ensure that there is one e-mail in the captured e-mails array.
     $captured_emails = $this->drupalGetMails();
-    $this->assertEqual(count($captured_emails), 1, 'One e-mail was captured.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 1, 'One e-mail was captured.', 'Email');
 
     // Assert that the e-mail was sent by iterating over the message properties
     // and ensuring that they are captured intact.
     foreach ($message as $field => $value) {
-      $this->assertMail($field, $value, format_string('The e-mail was sent and the value for property @field is intact.', array('@field' => $field)), 'E-mail');
+      $this->assertMail($field, $value, format_string('The e-mail was sent and the value for property @field is intact.', array('@field' => $field)), 'Email');
     }
 
     // Send additional e-mails so more than one e-mail is captured.
@@ -488,21 +440,21 @@ class SimpleTestMailCaptureTestCase extends DrupalWebTestCase {
 
     // There should now be 6 e-mails captured.
     $captured_emails = $this->drupalGetMails();
-    $this->assertEqual(count($captured_emails), 6, 'All e-mails were captured.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 6, 'All e-mails were captured.', 'Email');
 
     // Test different ways of getting filtered e-mails via drupalGetMails().
     $captured_emails = $this->drupalGetMails(array('id' => 'drupal_mail_test'));
-    $this->assertEqual(count($captured_emails), 1, 'Only one e-mail is returned when filtering by id.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 1, 'Only one e-mail is returned when filtering by id.', 'Email');
     $captured_emails = $this->drupalGetMails(array('id' => 'drupal_mail_test', 'subject' => $subject));
-    $this->assertEqual(count($captured_emails), 1, 'Only one e-mail is returned when filtering by id and subject.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 1, 'Only one e-mail is returned when filtering by id and subject.', 'Email');
     $captured_emails = $this->drupalGetMails(array('id' => 'drupal_mail_test', 'subject' => $subject, 'from' => 'this_was_not_used@example.com'));
-    $this->assertEqual(count($captured_emails), 0, 'No e-mails are returned when querying with an unused from address.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 0, 'No e-mails are returned when querying with an unused from address.', 'Email');
 
     // Send the last e-mail again, so we can confirm that the drupalGetMails-filter
     // correctly returns all e-mails with a given property/value.
     drupal_mail_system('drupal_mail_test', $index)->mail($message);
     $captured_emails = $this->drupalGetMails(array('id' => 'drupal_mail_test_4'));
-    $this->assertEqual(count($captured_emails), 2, 'All e-mails with the same id are returned when filtering by id.', 'E-mail');
+    $this->assertEqual(count($captured_emails), 2, 'All e-mails with the same id are returned when filtering by id.', 'Email');
   }
 }
 

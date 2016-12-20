@@ -1223,7 +1223,7 @@ class SiteMaintenanceTestCase extends DrupalWebTestCase {
     $edit = array(
       'name' => $this->user->name,
     );
-    $this->drupalPost('user/password', $edit, t('E-mail new password'));
+    $this->drupalPost('user/password', $edit, t('Email new password'));
     $mails = $this->drupalGetMails();
     $start = strpos($mails[0]['body'], 'user/reset/'. $this->user->uid);
     $path = substr($mails[0]['body'], $start, 66 + strlen($this->user->uid));
@@ -2352,20 +2352,6 @@ class UpdateScriptFunctionalTest extends DrupalWebTestCase {
     parent::setUp('update_script_test');
     $this->update_url = $GLOBALS['base_url'] . '/update.php';
     $this->update_user = $this->drupalCreateUser(array('administer software updates'));
-  }
-
-  /**
-   * Tests that there are no pending updates for the first test method.
-   */
-  function testNoPendingUpdates() {
-    // Ensure that for the first test method in a class, there are no pending
-    // updates. This tests a drupal_get_schema_versions() bug that previously
-    // led to the wrong schema version being recorded for the initial install
-    // of a child site during automated testing.
-    $this->drupalLogin($this->update_user);
-    $this->drupalGet($this->update_url, array('external' => TRUE));
-    $this->drupalPost(NULL, array(), t('Continue'));
-    $this->assertText(t('No pending updates.'), 'End of update process was reached.');
   }
 
   /**

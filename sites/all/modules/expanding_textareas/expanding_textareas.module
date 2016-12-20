@@ -1,0 +1,52 @@
+<?php
+
+define('EXPANDING_TEXTAREAS_DEFAULT_ID', "edit-body-und-0-value");
+
+/**
+ * Implement hook_library()
+ */
+function expanding_textareas_library() {
+  $library['jquery.expandingtextareas'] = array(
+    'title' => 'Expanding Textareas',
+    'website' => 'https://github.com/bgrins/ExpandingTextareas',
+    'version' => '1.0',
+    'js'    => array(
+      drupal_get_path('module', 'expanding_textareas') . '/js/expanding.js' => array(),
+    ),
+  );
+  return $library;
+}
+
+/**
+ * Implement_hook_menu()
+ */
+function expanding_textareas_menu() {
+  $items['admin/config/user-interface/expanding_textareas'] = array(
+    'title' => 'Expanding Textareas',
+    'description' => 'Settings for expanding textareas',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('expanding_textareas_admin'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'expanding_textareas.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function expanding_textareas_element_info_alter(&$types) {
+  $types['textarea']['#pre_render'][] = 'expanding_textareas_pre_render_text_format';
+}
+
+/**
+ * Process a text format widget to load and attach expanding textareas format.
+ */
+function expanding_textareas_pre_render_text_format($element) {
+  $field = &$element;
+  if ((variable_get('expanding_textareas_admin_fields', EXPANDING_TEXTAREAS_DEFAULT_ID) == '*') || (in_array($field['#id'], array_map('trim', explode("\n", variable_get('expanding_textareas_admin_fields', EXPANDING_TEXTAREAS_DEFAULT_ID)))))) {
+    $element['#attributes']['class'][] = 'expanding';
+    $element['#attached']['library'][] = array('expanding_textareas', 'jquery.expandingtextareas');
+  }
+  return $element;
+}

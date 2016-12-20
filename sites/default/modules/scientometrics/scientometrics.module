@@ -1,5 +1,0 @@
-<?php
-	function scientometrics_init(){
-		echo current_path();
-	}
-?>

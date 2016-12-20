@@ -1,0 +1,493 @@
+<?php
+require ("testaction_constants.inc");
+
+function testaction_comment_view($comment, $view_mode, $langcode) {
+	// how old is the comment
+	//$comment->time_ago = time() - $comment->changed;
+}
+
+function testaction_action_info() {
+	return array(
+		'test_submit_action' => array(
+			'type' => 'system',
+			'label' => t('Paper Submitted'),
+			'configurable' => FALSE,
+			'triggers' => array('node_insert')
+		),
+		'test_update_action' => array(
+			'type' => 'system',
+			'label' => t('Paper Updated'),
+			'configurable' => FALSE,
+			'triggers' => array('node_update')
+		),
+           /*     'generateUsers1' =>   array(
+			'type' => 'system',
+			'label' => t('Generate Users'),
+			'configurable' => FALSE,
+			'triggers' => array('node_insert')
+		),*/
+	);
+}
+
+function test_update_action($object, $context) {
+	if ($context['node'] -> type != 'submit_paper') {
+		return;
+	}
+	$node = $context['node'];
+
+	$found = FALSE;
+	$editorId = -1;
+	if (isset($node -> field_editor['und']) && sizeof($node -> field_editor['und']) > 0) {
+		$editorId = $node -> field_editor['und'][0]['uid'];
+
+	} else if (isset($node -> field_editor[0])) {
+		$editorId = $node -> field_editor[0]['uid'];
+	}
+	$changed = false;
+	
+	if (sizeof($context['node'] -> original -> field_editor) == 0 && sizeof($context['node'] -> field_editor) == 1) {
+		$changed = true;
+	}
+
+	if(sizeof($context['node'] -> original -> field_author['und']) < sizeof($context['node'] -> field_author['und'])){
+	             foreach ($context['node']->field_author['und'] as $a) {
+				$field_value = field_view_value('node', $node, 'field_author', $a, array());
+				//$emailString = $a->field_mail[]['#value'];//$field_value['field_mail'][0]['#markup'];
+				foreach ($field_value['entity']['field_collection_item'] as $key => $result) {
+					$emailString = $result['field_mail'][0]['#markup'];
+					$fullName = $result['field_fullname'][0]['#markup'];
+					//$name .= $result['field_lname'][0]['#markup'] . ' ';
+
+				}
+				$account = user_load_by_mail($emailString);
+                                if(!$account){
+					$trialName = $fullName; 
+                                        $c = 1;
+                                        while(user_load_by_name($trialName)){
+                                              $trialName = $fullName . $c;
+                                              $c++;
+                                        }
+					createUser($emailString, $trialName , 1, $node);
+				}		
+		}
+
+
+	}	
+	//code to notify editor
+  
+	if ($editorId != -1 && $changed) {
+		$account = user_load($editorId);
+
+		$params['account'] = $account;
+		global $user;
+		//update_actions_table(1, $node -> nid, $node -> vid, $account -> name . ' is made the responsible editor', $user -> uid, $account -> uid);
+
+		try {
+			$node_update = node_load($node -> nid, $node -> vid, true);
+			$node -> taxonomy_vocabulary_1['und'][0]['tid'] = 1;
+			node_save($node);
+		} catch(Exception $e) {
+			watchdog_exception('kunal', $e);
+		}
+
+	}
+        if (isset($context['node'] -> original) && isset($context['node']->field_approval['und'])&& sizeof($context['node'] -> original -> field_approval) == 0 && sizeof($context['node'] -> field_approval['und']) == 1) {	
+	
+		$authors = $context['node'] -> field_author;
+		$temp_entity_ids = array();
+		$params['subject'] = str_replace('{{tracking_number}}', $context['node'] -> nid . '-' . $context['node'] -> vid, REV_DEC_APR_SUB);
+		if (!isset($context['node'] -> field_decision_letter['und']['0'])) {
+			return;
+		}
+		/*try {
+			$node_update = node_load($context['node'] -> nid, $context['node'] -> vid, true);
+			$node_update -> taxonomy_vocabulary_1['und'][0]['tid'] = 2;
+			node_save($node_update);
+		} catch(Exception $e) {
+			watchdog_exception('kunal', $e);
+		}*/
+                $msg = replace_email_tokens($context['node']->nid, REV_DEC_APR_MSG);
+                $msg = str_replace('{{decision_letter}}', $context['node'] -> field_decision_letter['und']['0']['value'], $msg);  
+		$params['message'] = $msg;
+		foreach ($context['node']->field_author['und'] as $a) {
+				$field_value = field_view_value('node', $node, 'field_author', $a, array());
+				//$emailString = $a->field_mail[]['#value'];//$field_value['field_mail'][0]['#markup'];
+				foreach ($field_value['entity']['field_collection_item'] as $key => $result) {
+					$emailString = $result['field_mail'][0]['#markup'];
+					$fullName = $result['field_fullname'][0]['#markup'];
+					//$name .= $result['field_lname'][0]['#markup'] . ' ';
+
+				}
+                         drupal_mail('testaction', 'one-one', $emailString, '', $params);
+				
+		}	
+              
+
+		//send email to reviewers
+		$reviewers = db_query('select ruid from paper_reviewer where nid=' . $node -> nid . ' and vid=' . $node -> vid .' and accept in (0,1)');
+		foreach ($reviewers as $reviewer) {
+			$revobj = user_load($reviewer -> ruid);
+			$params = array();
+			$params['subject'] = REV_DEC_APR_REV_SUB;
+			$msg = REV_DEC_APR_REV_MSG;
+			$msg = str_replace('{{reviewer}}', $revobj -> name, $msg);
+			$msg = str_replace('{{title}}', $node -> title, $msg);
+			$msg = str_replace('{{url}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE)), $msg);
+			$msg = replace_email_tokens($node->nid,$msg);
+			$params['message'] = $msg;
+			drupal_mail('testaction', 'one-one', $revobj -> mail, '', $params);
+		}
+		//send mail to editor
+		$editorobj = user_load($editorId);
+		$params = array();
+		$params['subject'] = str_replace('{{tracking_number}}', $context['node'] -> nid . '-' . $context['node'] -> vid, REV_DEC_APR_EDITOR_SUB);
+		$msg = replace_email_tokens($node->nid, REV_DEC_APR_EDITOR_MSG);
+		$params['message'] = $msg;
+		drupal_mail('testaction', 'one-one', $editorobj -> mail, '', $params);
+	}
+}
+
+function test_submit_action($object, $context) {
+	if ($context['node'] -> type == 'submit_paper') {
+		$node = $context['node'];
+
+		$authors = $node -> field_author;
+		$temp_entity_ids = array();
+		
+  		if (isset($node -> field_author['und'])) {
+			foreach ($node->field_author['und'] as $a) {
+				$field_value = field_view_value('node', $node, 'field_author', $a, array());
+				//$emailString = $a->field_mail[]['#value'];//$field_value['field_mail'][0]['#markup'];
+				foreach ($field_value['entity']['field_collection_item'] as $key => $result) {
+					$emailString = $result['field_mail'][0]['#markup'];
+					$fullName = $result['field_fullname'][0]['#markup'];
+					//$name .= $result['field_lname'][0]['#markup'] . ' ';
+					
+				}
+                                
+				$account = user_load_by_mail($emailString);
+				if (!$account) {
+                                        $trialName = $fullName; 
+                                        $c = 1;
+                                        while(user_load_by_name($trialName)){
+                                              $trialName = $fullName . $c;
+                                              $c++;
+                                        }
+                                        
+					$res = createUser($emailString, $trialName , 1, $node);
+					
+					$node_updated = node_load($node->nid, $node->vid, true);
+					  // Add the user ID you'd like to add to this node reference.
+					watchdog('new users id', $res->uid);
+					  $node_updated->field_authors_ref['und'][] = array('uid' => $res->uid);
+					  // Save the node.
+					  node_save($node_updated);	
+					/*$node = node_load($node->nid);					
+					$node->field_authors_ref['und'][0]['uid'] = $res->uid;
+					node_save($node); 
+					dpm('called');*/
+					$params['account'] = $res;
+					$params['tracking'] = $node -> nid . '-' . $node -> vid;
+					drupal_mail('testaction', 'submit', $res -> mail, user_preferred_language($res), $params);
+				}else {
+					$node_updated = node_load($node->nid, $node->vid, true);
+					$node_updated->field_authors_ref['und'][]['uid'] = $account->uid;					watchdog('I am here', 'yes');	
+					  // Save the node.
+					  node_save($node_updated);	
+					$params['account'] = $account;
+					$params['tracking'] = $context['node'] -> nid . '-' . $context['node'] -> vid;
+					drupal_mail('testaction', 'submit_exist', $account -> mail, user_preferred_language($account), $params);
+				} 
+				}
+		}
+		//code to retrieve author information from the field collection.
+		/*$temp_entities = entity_load('field_collection_item', $temp_entity_ids);
+		$emailids = array();
+		foreach ($temp_entities as $temp_ent_id => $temp_ent) {
+			$author1 = $temp_ent -> field_mail[LANGUAGE_NONE][0];
+			$emailString = substr(implode(",", $author1), 0, strrpos(implode(",", $author1), ',') - 1);
+			$emailids[] = $emailString;
+                        watchdog('email String','**'.$emailString.'**');
+			$account = user_load_by_mail($emailString);
+			watchdog('isaccount valid',!$account);
+			if (!$account) {
+				$res = createUser($emailString, $temp_ent -> field_fullname[LANGUAGE_NONE][0]['value'] , 1, $node);
+				$params['account'] = $res;
+				$params['tracking'] = $node -> nid . '-' . $node -> vid;
+				drupal_mail('testaction', 'submit', $res -> mail, user_preferred_language($res), $params);
+			} else {
+				$params['account'] = $account;
+				$params['tracking'] = $context['node'] -> nid . '-' . $context['node'] -> vid;
+				drupal_mail('testaction', 'submit_exist', $account -> mail, user_preferred_language($account), $params);
+			}
+		}*/
+
+                //send email to eics
+		$eic_emails = get_eic_emails();
+                $params['nid'] = $node->nid;
+                drupal_mail('testaction', 'eic_submit', $eic_emails, '', $params);       
+	}
+}
+
+function emailConfirmationOne($emailIds, $node) {
+	foreach ($emailIds as $email) {
+		$account = user_load_by_mail($email);
+		$params['account'] = $account;
+		$params['tracking'] = $node -> nid . '-' . $node -> vid;
+		drupal_mail('testaction', 'author_review', $account -> mail, user_preferred_language($account), $params);
+	}
+}
+
+function emailConfirmation($emailIds) {
+	foreach ($emailIds as $email) {
+		$account = user_load_by_mail($email);
+		if (!$account) {
+			createUser($email);
+		} else {
+			$params['account'] = $account;
+			drupal_mail('testaction', 'submit_exist', $account -> mail, user_preferred_language($account), $params);
+		}
+	}
+}
+
+function notifyEicMSG($mtype, $node = null) {
+	//select uid from users_roles, role where role.name = 'EIC' and users_roles.rid =
+	// role.rid;
+	/*$eic = EIC_ROLE;
+	$result = db_query("Select u.uid from users_roles u INNER JOIN role r on u.rid = r.rid where r.name='" . $eic . "'");
+	$uidarr = array();
+	foreach ($result as $row) {
+		$uidarr[] = $row -> uid;
+	}
+	$users = user_load_multiple(array(), array('uid' => $uidarr));
+	//$users = reset($users);
+	foreach ($users as $user1) {
+		$params['account'] = $user1;
+		if (isset($node)) {
+			$params['tracking'] = $node -> nid . '-' . $node -> vid;
+                        $params['nid'] = $node->nid; 
+		}
+		drupal_mail('testaction', $mtype, $user1 -> mail, user_preferred_language($user1), $params);
+	}*/
+	if (isset($node)) {
+                        $params['tracking'] = $node -> nid . '-' . $node -> vid;
+                        $params['nid'] = $node->nid; 
+                }
+	drupal_mail('testaction', $mtype, get_eic_emails(), '', $params);
+}
+
+function createUser($emailId, $name = null, $active = 0, $node = null) {
+	if (!is_null($name)) {
+		$edit = array(
+			'name' => $name,
+			'mail' => $emailId,
+			'status' => $active
+		);
+	} else {
+		$edit = array(
+			'name' => $emailId,
+			'mail' => $emailId
+		);
+	}
+	$acc = array('is_new' => TRUE);
+	$result = user_save((Object)$acc, $edit);
+	if (!$result) {
+		watchdog('user creation', 'user creation failed');
+	}
+	$accounts = array($result);
+	if ($active == 1) {
+
+		$params['account'] = $result;
+
+		$mail = drupal_mail('user', 'register_no_approval_required', $result -> mail, user_preferred_language($result), $params);
+
+	} else {
+		_user_mail_notify('register_pending_approval', $result, $language = NULL);
+	}
+	//if (is_null($name)) testaction_notify($accounts, $node);
+
+	return $result;
+}
+
+function testaction_notify($accounts, $node = null) {
+	foreach ($accounts as $account) {
+		$params['account'] = $account;
+		$params['tracking'] = $node -> nid . '-' . $node - vid;
+		drupal_mail('testaction', 'submit', $account -> mail, user_preferred_language($account), $params);
+	}
+}
+function replace_email_tokens($nid, $msg){
+	$node = node_load($nid);
+         $editor_uid = get_responsible_editor($node);
+         if($editor_uid != '' ){
+		$editor = user_load(get_responsible_editor($node));
+		$msg = str_replace('{{editor}}', $editor->name,$msg);
+	        $msg = str_replace('{{editor_email}}', $editor->mail,$msg);
+	 }
+         //$sub = str_replace('{{tracking_number}}', $node->nid . '-' . $node->vid, $sub);
+         $msg = str_replace('{{tracking_number}}', $node -> nid . '-' . $node -> vid, $msg);
+         //$msg = str_replace('{{reviewer}}', $name, $msg);
+         //$msg = str_replace('{{username}}', $name, $msg);
+         $msg = str_replace('{{authors}}', get_authors($node), $msg);
+         $msg = str_replace('{{url}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE)), $msg);
+         $msg = str_replace('{{title}}', $node->title, $msg);
+         
+        
+        return $msg;
+}
+
+function get_decision_from_key($str){
+				if ($str == 'accept')
+                                        $suggestion = t('Accept');
+                                else if ($str == 'minor')
+                                        $suggestion = t('Minor revision');
+                                else if ($str  == 'major')
+                                        $suggestion = t('Major revision');
+                                else if ($str == 'rej resub')
+                                        $suggestion = t('Reject and resubmit');
+                                else if ($str == 'reject')
+                                        $suggestion = t('Reject');
+                                else
+                                        $suggestion = '';
+
+return $suggestion;
+}
+
+function get_eic_emails(){
+   $emails = '';
+   $eic = 'EditorInChief';
+                        $result = db_query("Select distinct u.uid from users_roles u INNER JOIN role r on u.rid = r.rid where r.name='" . $eic . "'");
+                        $first = true;
+                        foreach ($result as $row) {
+                                if($first){
+					$emails = user_load($row -> uid)->mail;
+                                        $first = false;
+				}
+                                $emails .= ','.user_load($row -> uid)->mail;
+                        }
+
+   return $emails;
+}
+function testaction_mail($key, &$message, $params) {
+	$data = array();
+	if (isset($params['account'])) {
+		$data['user'] = $params['account'];
+	}
+	$options['language'] = $message['language'];
+	user_mail_tokens($variables, $data, $options);
+
+	switch($key) {
+		case 'submit_exist' :
+			$body = AUTHOR_SUBMISSION_MESSAGE;
+			$body .= SWJ_NOTICE;
+			$body = str_replace('{{author}}', $params['account'] -> name, $body);
+			$subject = AUTHOR_SUBMISSION_SUBJECT;
+			$subject = str_replace('{{tracking_number}}', $params['tracking'], $subject);
+			$langcode = $message['language'] -> language;
+			$message['subject'] = t($subject, $variables, array('langcode' => $langcode));
+			$message['body'][] = t($body, $variables, array('langcode' => $langcode));
+			break;
+
+		case 'submit' :
+			$subject = AUTHOR_SUBMISSION_NEW;
+	
+			$subject = str_replace('{{tracking_number}}', $params['tracking'], $subject);
+
+			$body = AUTHOR_SUBMISSION_NEW_MSG;
+			$body .= SWJ_NOTICE;
+			$body = str_replace('{{author}}', $params['account'] -> name, $body);
+			$body = str_replace('{{login}}', $params['account'] -> name, $body);
+			//$body = str_replace('{{password}}', '', $body); //////////////////// this is already hashed
+
+			$langcode = $message['language'] -> language;
+			$message['subject'] = t($subject, $variables, array('langcode' => $langcode));
+			$message['body'][] = t($body, $variables, array('langcode' => $langcode));
+			break;
+
+		case 'author_review' :
+			$subject = SUBMISSION_AUTHOR_APR_SUB;
+			$subject = str_replace('{{tracking_number}}', $params['tracking'], $subject);
+
+			$body = SUBMISSION_AUTHOR_APR_MSG;
+			$body .= SWJ_NOTICE;
+			$body = str_replace('{{author}}', $params['account'] -> name, $body);
+
+			$langcode = $message['language'] -> language;
+			$message['subject'] = t($subject, $variables, array('langcode' => $langcode));
+			$message['body'][] = t($body, $variables, array('langcode' => $langcode));
+			break;
+
+		case 'eic_submit' :
+			$langcode = '';//$message['language'] -> language;
+                        $sub = replace_email_tokens($params['nid'], SUBMISSION_EIC_SUB);
+                        $msg = replace_email_tokens($params['nid'], SUBMISSION_EIC_MSG);
+			$message['subject'] = t($sub, array(), array('langcode' => $langcode));
+			$message['body'][] = t($msg, array(), array('langcode' => $langcode));
+			break;
+
+		case 'eic_decision' :
+			$subject = REV_DEC_LETTER_SUB;
+			$subject = str_replace('{{tracking_number}}', $params['tracking'], $subject);
+
+			$langcode = '';
+			$message['subject'] = t($subject, array(), array('langcode' => $langcode));
+                        $msg = replace_email_tokens($params['nid'], REV_DEC_LETTER_MSG);
+			$msg .= SWJ_NOTICE;
+			$message['body'][] = t($msg, array(), array('langcode' => $langcode));
+			break;
+
+		case 'eic_decision_pre' :
+			$subject = REV_DEC_EIC_SUB;
+			$subject = str_replace('{{tracking_number}}', $params['tracking'], $subject);
+
+			$langcode = $message['language'] -> language;
+			$message['subject'] = t($subject, $variables, array('langcode' => $langcode));
+			$message['body'][] = t(REV_DEC_EIC_MSG . SWJ_NOTICE, $variables, array('langcode' => $langcode));
+			break;
+
+		case 'editor' :
+			$subject = SUBMISSION_EDITOR_SUB;
+			$subject = str_replace('{{tracking_number}}', '', $subject);
+
+			$body = SUBMISSION_EDITOR_MSG;
+			$body = str_replace('{{editor}}', $params['account'] -> name, $body);
+			$body .= SWJ_NOTICE;
+			$langcode = $message['language'] -> language;
+			$message['subject'] = t($subject, $variables, array('langcode' => $langcode));
+			$message['body'][] = t($body, $variables, array('langcode' => $langcode));
+			break;
+
+		case 'one-one' :
+                        $eic_emails = get_eic_emails();
+                        $langcode = '';
+			$message['subject'] = $params['subject'];
+			$body = $params['message'] . SWJ_NOTICE;
+			$message['body'][] = t($body, array(), array('langcode' => $langcode));
+			if(isset($params['cc'])){
+                               $message['headers']['cc'] = $params['cc'].','. $eic_emails;
+			}else{
+			   $message['headers']['cc'] = $eic_emails;
+			}
+			if(isset($params['Reply-to'])){
+				$message['headers']['Reply-to'] = $params['Reply-to'];
+			}
+			break;
+	}
+}
+
+function update_actions_table($type, $nid, $vid, $description, $uid, $value) {
+
+	$d = db_insert('swj_actions') -> fields(array(
+		'nid' => $nid,
+		'type' => $type,
+		'action_by' => $uid,
+		'vid' => $vid,
+		'value' => '' . $value,
+		'adate' => REQUEST_TIME,
+		'description' => t($description),
+	)) -> execute();
+        
+       $node = node_load($nid);
+       $node->field_last_action['und'][0]['value'] = REQUEST_TIME;
+       node_save($node);            
+}
