@@ -1386,11 +1386,11 @@ not foo://disallowed.com.
     $tests = array(
       '
 Partial URL with trailing period www.partial.com.
-Email with trailing comma person@example.com,
+E-mail with trailing comma person@example.com,
 Absolute URL with trailing question http://www.absolute.com?
 Query string with trailing exclamation www.query.com/index.php?a=!
 Partial URL with 3 trailing www.partial.periods...
-Email with 3 trailing exclamations@example.com!!!
+E-mail with 3 trailing exclamations@example.com!!!
 Absolute URL and query string with 2 different punctuation characters (http://www.example.com/q=abc).
 ' => array(
         'period <a href="http://www.partial.com">www.partial.com</a>.' => TRUE,

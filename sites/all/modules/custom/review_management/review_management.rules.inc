@@ -173,6 +173,9 @@ function review_management_decision_made($node){
 			$msg = str_replace('{{reviewer}}', $revobj -> name, $msg);
 			$msg = str_replace('{{title}}', $node -> title, $msg);
 			$msg = str_replace('{{url}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE)), $msg);
+                	$msg = str_replace('{{direct_url}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE, 'query' => array('l' => $token))), $msg);	
+	
+                       $msg = str_replace('{{reviews}}', url(drupal_get_path_alias('node/' . $node -> nid), array('absolute' => TRUE)), $msg); 
 			$msg = replace_email_tokens($node->nid,$msg);
 			$params['message'] = $msg;
 			drupal_mail('testaction', 'one-one', $revobj -> mail, '', $params);

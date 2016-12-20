@@ -95,9 +95,7 @@ function set_authors_to_paper(&$node, $authors){
   foreach($authors as $author){
     //try to load the email of the author
     $emailString = $author['email'];
-    $firstname = $author['field_first_name'];
-    $lastname = $author['field_last_name']; 
-    $fullName = $author['email'];
+    $fullName = $author['name'];
 
     $account = user_load_by_mail($emailString);
 
@@ -109,7 +107,7 @@ function set_authors_to_paper(&$node, $authors){
             $trialName = $fullName . $c;
             $c++;
       }
-      $account = createUser($emailString, $trialName, $firstname, $lastname, 1, $node);
+      $account = createUser($emailString, $trialName , 1, $node);
         if($checkExisting){
           $params['account'] = $account;
     	    $params['title'] = $node->title;
@@ -361,24 +359,12 @@ function getDropDownMenu($nid, $hide){
   /* if($isEIC){
     $links[] = ctools_modal_text_button('Edit Paper Fields', $base_url.'/swj/nojs/edit_content_modal/'.$nid, t('Edit Paper Fields'),  'ctools-modal-ctools-sample-style');
   } */
- $res_editor = db_query("SELECT count(*) FROM {field_revision_field_editor} where entity_id = :nid ", array(
-      ':nid' => $nid,
-        )) -> fetchField();
-		
   if(!$hide || $isEIC){
     $text_label = "Submit Decision Letter";
     if($hide){
       $text_label ="Approve Decision";
     }
- 
-   if($res_editor > 0){
-     $links[] = ctools_modal_text_button($text_label, $base_url.'/swj/nojs/decision/'.$nid, t('Submit Decision Letter'),  'ctools-modal-ctools-sample-style');
-     }
-	else{
-	
-	 $links[] = ctools_modal_text_button($text_label, $base_url.'/swj/nojs/decisionwarning/'.$nid, t('Submit Decision Letter'),  'ctools-modal-modal-popup-small');
- 
-	}
+    $links[] = ctools_modal_text_button($text_label, $base_url.'/swj/nojs/decision/'.$nid, t('Submit Decision Letter'),  'ctools-modal-ctools-sample-style');
   }
   $links[] = ctools_modal_text_button(t('Email editors in chief'), $base_url.'/swj/nojs/email_eic/'.$nid, t('Email editors in chief'),  'ctools-modal-ctools-sample-style');
   $output = '<div><h2><b>' . t('Actions:').'</b></h2>'. '<h4> (Invite Reviewer, Add Review, Submit Decision) </h4>' ;

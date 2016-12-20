@@ -28,11 +28,15 @@
       hide($content['links']);
       if(!isset($in_preview) || !$in_preview){
 				  hide($content['field_author']);
+
 				}
 				hide($content['field_last_action']);
+
 				//dpm($in_preview);
 				hide($content['field_decision']);
 				hide($content['field_decision_letter']);
+
+
 				//hide($content['authors_table']);
 				//hide($content['authors_table1']);
 				hide($content['actions_eic']);
@@ -63,7 +67,8 @@
                 hide($content['submitted_reviews']);
                 hide($content['contact_editor']);
 				hide($content['camera_ready_entity_view_1']);
-				hide($content['field_editor']);
+		                hide($content['immediate_proceed_entity_view_1']); 
+                        	hide($content['field_editor']);
 				hide($content['field_authors_ref']);
 				hide($content['allow_cover']);
 				hide($content['field_cover_letter']);
@@ -130,7 +135,8 @@
 
 					<?php
     					hide($content['cam_ready']);
-    					hide($content['notes_entity_view_1']);
+    			                hide($content['immediate_pub']);	
+					hide($content['notes_entity_view_1']);
                     ?>
                     <div style="background-color: #E3E5E3;border-radius:5px;padding-top:4px;padding-bottom:4px;padding-left:6px;">
 					<?php
@@ -177,6 +183,41 @@
 
 					}
                     ?>
+
+
+
+
+
+
+
+
+                   <?php
+					if(!isset($node->showFinalVersionLink) || !$node->showFinalVersionLink ){
+					  //watchdog('in','here');
+					  //hide($content['camera_ready_entity_view_1']);
+					  //$content['camera_ready_entity_view_1']	= array();
+
+					  $content['links']['nodereference_url']['#links']['immediate_to_prceed_file_field_paper_immediate'] = array();
+
+					}else{
+					  //dpm($content['links']['nodereference_url']);
+					  print('<div style="background-color: #E3E5E3;border-radius: 5px;padding-top:4px;padding-bottom:4px;padding-left:6px;"><h2>');
+					  if(!isset($content['immediate_proceed_entity_view_1']) || sizeof($content['immediate_proceed_entity_view_1'])<=1){
+					    //print_r($content['cam_ready']);
+
+					    print render($content['immediate_pub']);
+					  }else{ 
+					    print render($content['immediate_proceed_entity_view_1']);
+
+					  }
+					  print('</h2></div><br/>');
+
+					}
+                    ?>
+
+
+
+
 
                     <?php
                      if(isset($content['field_decision']['#title'])){

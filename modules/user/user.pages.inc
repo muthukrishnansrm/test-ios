@@ -32,7 +32,7 @@ function user_pass() {
 
   $form['name'] = array(
     '#type' => 'textfield',
-    '#title' => t('Email'),
+    '#title' => t('Username or e-mail address'),
     '#size' => 60,
     '#maxlength' => max(USERNAME_MAX_LENGTH, EMAIL_MAX_LENGTH),
     '#required' => TRUE,
@@ -49,7 +49,7 @@ function user_pass() {
     );
   }
   $form['actions'] = array('#type' => 'actions');
-  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Email new password'));
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('E-mail new password'));
 
   return $form;
 }

@@ -130,8 +130,8 @@ function email_form_gen($name, $email, $nid, $vid){
 		'#required' => TRUE,
 	    '#default_value' => replace_email_tokens($nid, GENERIC_SUB),
 	);
-	
-	 $form['attachment'] = array(
+
+  $form['attachment'] = array(
         '#title' => t('Upload the document'),
 		'#type' => 'managed_file',
 		'#upload_location' => 'public://author_document',
@@ -143,7 +143,6 @@ function email_form_gen($name, $email, $nid, $vid){
       ),
     );
 	
-
 	$form['message'] = array(
 		'#title' => 'Message',
 		'#type' => 'textarea',
@@ -154,6 +153,9 @@ function email_form_gen($name, $email, $nid, $vid){
 	    '#default_value' => replace_email_tokens($nid, GENERIC_MSG),
 	);
 
+	
+	 
+	
 	$form['submit'] = array(
 		'#title' => 'Submit',
 		'#type' => 'submit',

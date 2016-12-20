@@ -84,15 +84,6 @@ $items['swj/%ctools_js/decision'] = array(
       'type' => MENU_CALLBACK,
   );
 
- $items['swj/%ctools_js/decisionwarning'] = array(
-      'title' => 'Submit Decisionwarning Letter',
-      'page callback' => 'decisionwarning_modal_callback',
-      'page arguments' => array(1),
-      'access callback' => TRUE,
-      'type' => MENU_CALLBACK,
-  );
-
-
 $items['swj/%ctools_js/email_eic'] = array(
       'title' => 'Send email to EIC',
       'page callback' => 'email_eic_modal_callback',
@@ -258,18 +249,11 @@ function reviewer_select_node_validate($node, $form, &$form_state) {
     $errorString = "Author Field Error(s) <ul>";
     $errorFlag = false;
     foreach ($form_state['values']['authors'] as $author) {
-      $firstname = $author['field_first_name'];
-      $lastname = $author['field_last_name']; 
-      $name = $author['email'];
+      $name = $author['name'] ;
       $email = $author['email'];
 
-      if($firstname == ''){
-        $errorString .=  "<li>".t('Author first name cannot be empty')."</li>";
-        $errorFlag = true;
-      }
-      
-       if($lastname == ''){
-        $errorString .=  "<li>".t('Author last name cannot be empty')."</li>";
+      if($name == ''){
+        $errorString .=  "<li>".t('Author name cannot be empty')."</li>";
         $errorFlag = true;
       }
       if($email == ''){
@@ -422,7 +406,7 @@ function reviewer_select_form_alter(&$form, &$form_state, $form_id) {
     $form['previous_version'] = array(
         '#type' => 'textfield',
         '#title' => 'Tracking number of previous version',
-        '#description' => 'If this is a revision of a previous version please enter the tracking number of your last submission. Leave blank if this is a new submission.'
+        '#description' => 'If this is a revision of a previous version please enter the tracking number of your last submission.'
 
         );
     $node = NULL;
@@ -585,6 +569,14 @@ function reviewer_select_node_view($node, $view_mode, $langcode) {
       $node-> content['links']['nodereference_url']['#links']['camera_ready_files_field_paper'] = array();
     }
 
+  // immediate to publication version
+	 if(isset($node-> content['links']['nodereference_url']['#links']) && sizeof($node-> content['links']['nodereference_url']['#links'])>=1){
+      $node-> content['immediate_pub']['#theme'] = 'links__node__nodereference';
+      $node-> content['immediate_pub']['#links']['immediate_to_prceed_file_field_paper_immediate'] = $node-> content['links']['nodereference_url']['#links']['immediate_to_prceed_file_field_paper_immediate'];
+      $node-> content['immediate_pub']['#attributes'] = array('class'=> array('links','inline'));
+      $node-> content['links']['nodereference_url']['#links']['immediate_to_prceed_file_field_paper_immediate'] = array();
+    }
+
 
     //check hideit
     $node->hideit = true;
@@ -592,6 +584,11 @@ function reviewer_select_node_view($node, $view_mode, $langcode) {
     if (isset($node -> field_tags['und']) && (isset($node -> field_tags['und']) && $node -> field_tags['und'][0]['tid'] != 1)) {
       $node->showFinalVersionLink = showCameraReady($node);
     }
+
+    if (isset($node -> field_tags['und']) && (isset($node -> field_tags['und']) && $node -> field_tags['und'][0]['tid'] != 1)) {
+      $node->showFinalVersionLink = showImmediatePublication($node);
+    }
+    
 
     //get submitted reviews
 
@@ -716,6 +713,196 @@ function reviewer_select_node_view($node, $view_mode, $langcode) {
 }
 
 
+
+
+function get_review_html($node , $reviewer){
+  global $user;
+
+  $query = db_select('paper_review', 'p');
+  $query -> condition('p.nid', $node -> nid, '=');
+  $query -> condition('p.vid', $node -> vid, '=');
+  $query -> condition('p.uid', $reviewer -> uid, '=');
+  $query -> fields('p', array(
+             'review_attachment'
+            ));
+  $results = $query -> execute();
+  foreach ($results as $result) {
+        if ($result->review_attachment !=0){
+
+				$query = db_select('paper_review','p');
+				$query->join('file_managed','f','p.review_attachment  = f.fid');  
+				$query -> condition('p.nid', $node -> nid, '=');
+				$query -> condition('p.vid', $node -> vid, '=');
+				$query -> condition('p.uid', $reviewer -> uid, '=');
+			/*	$query->fields('f',array(
+					'fid',
+
+
+			'filemime',
+                                 	'filename',
+					'uri'
+					));   */   
+		                  $query->fields('f',array('fid','filename','uri'));
+                     
+                       	$query->fields('p',array( 
+							'comment',
+							'comment_format',
+							'suggestion',
+							'p_comment',
+							'p_comment_format',
+							'created',
+							'anon',
+							'impression', 
+							'technical_quality',
+							'originality',
+							'bibliography',
+							'abstract_adequacy',
+							'introduction',
+							'organization',
+							'english',
+							'presentation',
+							'review_attachment'
+						));
+ 
+  
+				$results = $query -> execute();
+				$count = 0;
+  	  
+				foreach ($results as $result) {
+					$count++;
+					if ($result -> suggestion == 'accept')
+					$suggestion = t('Accept');
+					else if ($result -> suggestion == 'minor')
+					$suggestion = t('Minor revision');
+					else if ($result -> suggestion == 'major')
+						$suggestion = t('Major revision');
+					else if ($result -> suggestion == 'rej resub')
+						$suggestion = t('Reject and resubmit');
+					else if ($result -> suggestion == 'reject')
+						$suggestion = t('Reject');
+					else
+						$suggestion = '';
+
+						$anontext = 'Reviewer has chosen <b>not</b> to be <strong><em>Anonymous</em></strong>';
+						if($result->anon == 1){
+							$anontext = 'Reviewer has chosen to be <strong><em>Anonymous</em></strong>';
+							}
+						if(!is_closed_system()){
+							$anontext = '<p>'.$anontext.'</p>';
+							}else{
+								$anontext ='';
+								}
+							$html = "";
+
+							$html .= $anontext;
+
+							if($user->uid == $reviewer->uid || is_responsible_editor($node) || is_eic_user()) {
+							$html.= '<p><b>Comment for editor: (Not visible to authors)</b><br/>' . check_markup($result -> p_comment, $result -> p_comment_format).'</p>' ;
+								}
+							$html.= '<p><b>Overall Impression:</b> ' . $result->impression . '</p>'.
+							'<p><b>Suggested Decision: </b> ' . $suggestion .
+							'<p><b>Content</b></p>'.
+							'</p><p><b>Technical Quality of the paper:</b> ' . $result->technical_quality .
+							'<br/><b>Originality of the paper:</b> ' . $result->originality .
+							'<br/><b>Adequacy of the bibliography:</b> ' . $result->bibliography . '</p>'.
+							'<p><b>Presentation:</b></p>'.
+							'<p><b>Introduction: background and motivation:</b> ' . $result->introduction .
+							'<br/><b>Organization of the paper: </b>' . $result->organization .
+							'<br/><b>Level of English:</b> ' . $result->english .
+							'<br/><b>Overall presentation:</b> ' . $result->presentation . '</p>'.
+							'<br/><b>Review Document:</b><img class="file-icon" alt="File icon" title=" '. $result->filemime .'" src="/applied-ontology/modules/file/icons/application-files.png"> <a href="' . base_path() . 'system/files/review_document/'. $result->filename .'" type="' . $result->filemime . '">' . $result->filename . '</a></p>'.
+							'<p><b>Detailed Comments: </b><br/>' . check_markup($result -> comment, $result -> comment_format). '</p>';
+				}
+				
+				return $html;
+				}
+  
+		else{
+	  
+			
+			$query = db_select('paper_review', 'p');
+			$query -> condition('p.nid', $node -> nid, '=');
+			$query -> condition('p.vid', $node -> vid, '=');
+			$query -> condition('p.uid', $reviewer -> uid, '=');
+			$query -> fields('p', array(
+						'comment',
+						'comment_format',
+						'suggestion',
+						'p_comment',
+						'p_comment_format',
+						'created',
+						'anon',
+						'impression',
+						'technical_quality',
+						'originality',
+						'bibliography',
+						'abstract_adequacy',
+						'introduction',
+						'organization',
+						'english',
+						'presentation'
+					));
+  
+			$results = $query -> execute();
+			$count = 0;
+  	  
+			foreach ($results as $result) {
+				$count++;
+				if ($result -> suggestion == 'accept')
+					$suggestion = t('Accept');
+				else if ($result -> suggestion == 'minor')
+					$suggestion = t('Minor revision');
+				else if ($result -> suggestion == 'major')
+					$suggestion = t('Major revision');
+				else if ($result -> suggestion == 'rej resub')
+					$suggestion = t('Reject and resubmit');
+				else if ($result -> suggestion == 'reject')
+					$suggestion = t('Reject');
+				else
+					$suggestion = '';
+
+    $anontext = 'Reviewer has chosen <b>not</b> to be <strong><em>Anonymous</em></strong>';
+    if($result->anon == 1){
+	$anontext = 'Reviewer has chosen to be <strong><em>Anonymous</em></strong>';
+    }
+    if(!is_closed_system()){
+      $anontext = '<p>'.$anontext.'</p>';
+    }else{
+      $anontext ='';
+    }
+    $html = "";
+
+    $html .= $anontext;
+
+                       if($user->uid == $reviewer->uid || is_responsible_editor($node) || is_eic_user()) {
+                         $html.= '<p><b>Comment for editor: (Not visible to authors)</b><br/>' . check_markup($result -> p_comment, $result -> p_comment_format).'</p>' ;
+                       }
+                       $html.= '<p><b>Overall Impression:</b> ' . $result->impression . '</p>'.
+                       '<p><b>Suggested Decision: </b> ' . $suggestion .
+                       '<p><b>Content</b></p>'.
+                       '</p><p><b>Technical Quality of the paper:</b> ' . $result->technical_quality .
+                       '<br/><b>Originality of the paper:</b> ' . $result->originality .
+                       '<br/><b>Adequacy of the bibliography:</b> ' . $result->bibliography . '</p>'.
+                       '<p><b>Presentation:</b></p>'.
+                       '<p><b>Introduction: background and motivation:</b> ' . $result->introduction .
+                       '<br/><b>Organization of the paper: </b>' . $result->organization .
+                       '<br/><b>Level of English:</b> ' . $result->english .
+                       '<br/><b>Overall presentation:</b> ' . $result->presentation . '</p>'.
+					   
+                       '<p><b>Detailed Comments: </b><br/>' . check_markup($result -> comment, $result -> comment_format). '</p>';
+    }
+			
+			return $html;
+  
+  }
+  
+  
+  }
+  }
+
+
+/*
+
 function get_review_html($node , $reviewer){
   global $user;
 
@@ -790,6 +977,9 @@ function get_review_html($node , $reviewer){
     }
     return $html;
 }
+
+
+*/
 
 function get_review($node, $user) {
 

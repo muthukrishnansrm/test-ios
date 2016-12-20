@@ -1514,7 +1514,7 @@ function system_site_information_settings() {
   );
   $form['site_information']['site_mail'] = array(
     '#type' => 'textfield',
-    '#title' => t('Email'),
+    '#title' => t('E-mail address'),
     '#default_value' => variable_get('site_mail', ini_get('sendmail_from')),
     '#description' => t("The <em>From</em> address in automated e-mails sent during registration and new password requests, and other notifications. (Use an address ending in your site's domain to help prevent this e-mail being flagged as spam.)"),
     '#required' => TRUE,

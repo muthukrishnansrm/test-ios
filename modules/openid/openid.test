@@ -393,7 +393,7 @@ class OpenIDFunctionalTestCase extends OpenIDWebTestCase {
     $this->submitLoginForm($identity);
     $this->assertNoRaw('OpenID login failed.');
     $this->assertFieldByName('name', 'john', 'Username was supplied by provider.');
-    $this->assertFieldByName('mail', '', 'Email address supplied by provider was ignored.');
+    $this->assertFieldByName('mail', '', 'E-mail address supplied by provider was ignored.');
   }
 }
 

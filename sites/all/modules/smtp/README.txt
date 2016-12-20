@@ -28,7 +28,7 @@ This module sends email by connecting to an SMTP server.  Therefore, you need
 to have access to an SMTP server for this module to work.
 
 Drupal will often use the email address entered into Administrator ->
-Configuration -> Site information -> Email address as the from address.  It is
+Configuration -> Site information -> E-mail address as the from address.  It is
 important for this to be the correct address and some ISPs will block email that
 comes from an invalid address.
 

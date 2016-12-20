@@ -1127,7 +1127,7 @@ class CommentAnonymous extends CommentHelperCase {
 
     $anonymous_comment3 = $this->postComment($this->node, $this->randomName(), $this->randomName(), TRUE);
     // Name should have 'Anonymous' for value by default.
-    $this->assertText(t('Email field is required.'), 'Email required.');
+    $this->assertText(t('E-mail field is required.'), 'E-mail required.');
     $this->assertFalse($this->commentExists($anonymous_comment3), 'Anonymous comment with contact info (required) not found.');
 
     // Post comment with contact info (required).

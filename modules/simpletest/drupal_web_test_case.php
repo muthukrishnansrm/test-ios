@@ -1633,7 +1633,7 @@ class DrupalWebTestCase extends DrupalTestCase {
     $emailCount = count(variable_get('drupal_test_email_collector', array()));
     if ($emailCount) {
       $message = format_plural($emailCount, '1 e-mail was sent during this test.', '@count e-mails were sent during this test.');
-      $this->pass($message, t('Email'));
+      $this->pass($message, t('E-mail'));
     }
 
     // Delete temporary files directory.
@@ -3651,7 +3651,7 @@ class DrupalWebTestCase extends DrupalTestCase {
   protected function assertMail($name, $value = '', $message = '') {
     $captured_emails = variable_get('drupal_test_email_collector', array());
     $email = end($captured_emails);
-    return $this->assertTrue($email && isset($email[$name]) && $email[$name] == $value, $message, t('Email'));
+    return $this->assertTrue($email && isset($email[$name]) && $email[$name] == $value, $message, t('E-mail'));
   }
 
   /**

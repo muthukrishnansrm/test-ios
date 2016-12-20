@@ -1978,7 +1978,7 @@ class MollomFallbackModeTestCase extends MollomWebTestCase {
     $edit = array(
       'name' => $this->admin_user->name,
     );
-    $this->drupalPost(NULL, $edit, t('Email new password'), array('watchdog' => WATCHDOG_EMERGENCY));
+    $this->drupalPost(NULL, $edit, t('E-mail new password'), array('watchdog' => WATCHDOG_EMERGENCY));
     $this->assertNoText(t('Further instructions have been sent to your e-mail address.'));
     $this->assertNoText('CAPTCHA');
     $this->assertNoText('word verification');
@@ -2026,7 +2026,7 @@ class MollomFallbackModeTestCase extends MollomWebTestCase {
     $edit = array(
       'name' => $this->admin_user->name,
     );
-    $this->drupalPost(NULL, $edit, t('Email new password'), array('watchdog' => WATCHDOG_EMERGENCY));
+    $this->drupalPost(NULL, $edit, t('E-mail new password'), array('watchdog' => WATCHDOG_EMERGENCY));
     $this->assertText(t('Further instructions have been sent to your e-mail address.'));
     $this->assertNoText($this->fallback_message);
     $this->assertNoText('CAPTCHA');
@@ -2077,7 +2077,7 @@ class MollomFallbackModeTestCase extends MollomWebTestCase {
     $this->assertCaptchaField();
     $this->assertNoText($this->fallback_message);
 
-    $this->postCorrectCaptcha('user/password', array('name' => $this->admin_user->name), t('Email new password'));
+    $this->postCorrectCaptcha('user/password', array('name' => $this->admin_user->name), t('E-mail new password'));
     $this->assertText(t('Further instructions have been sent to your e-mail address.'));
   }
 }
@@ -2791,12 +2791,12 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
 
     // Try to reset the user's password by specifying an invalid CAPTCHA.
     $edit = array('name' => $this->web_user->name);
-    $this->postIncorrectCaptcha('user/password', $edit, t('Email new password'));
-    $this->postCorrectCaptcha(NULL, array(), t('Email new password'));
+    $this->postIncorrectCaptcha('user/password', $edit, t('E-mail new password'));
+    $this->postCorrectCaptcha(NULL, array(), t('E-mail new password'));
     $this->assertNoMailMollomReportLink();
 
     // Try to reset the user's password by specifying a valid CAPTCHA.
-    $this->postCorrectCaptcha('user/password', $edit, t('Email new password'));
+    $this->postCorrectCaptcha('user/password', $edit, t('E-mail new password'));
     $this->assertText(t('Further instructions have been sent to your e-mail address.'));
     $this->assertNoMailMollomReportLink();
   }

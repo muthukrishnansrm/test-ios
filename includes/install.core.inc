@@ -1789,7 +1789,7 @@ function _install_configure_form($form, &$form_state, &$install_state) {
   );
 
   $form['admin_account']['account']['mail'] = array('#type' => 'textfield',
-    '#title' => st('Email'),
+    '#title' => st('E-mail address'),
     '#maxlength' => EMAIL_MAX_LENGTH,
     '#required' => TRUE,
     '#weight' => -5,

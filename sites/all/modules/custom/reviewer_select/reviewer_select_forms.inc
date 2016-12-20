@@ -88,44 +88,28 @@ function add_author_form($form, &$form_state, $node = NULL) {
         '#type' => 'fieldset',
         '#tree' => TRUE,
       );
- 
-    $form_author['auth_add']['authors'][$i]['field_first_name'] = array(
-        '#title' => t('First Name'),
+
+      $form_author['auth_add']['authors'][$i]['name'] = array(
+        '#title' => t('Name'),
         '#type' => 'textfield',
-	    
-      );
-	   $form_author['auth_add']['authors'][$i]['field_last_name'] = array(
-        '#title' => t('Last Name'),
-        '#type' => 'textfield',
-		
       );
       $form_author['auth_add']['authors'][$i]['email'] = array(
         '#title' => t('Email'),
-        '#description' => t('This information will be used to create your account. Your email will be your username.'),
         '#type' => 'textfield',
       );
 
       unset($form_author['auth_add']['authors'][$i]['email']['#value']);
-      unset($form_author['auth_add']['authors'][$i]['field_first_name']['#value']);
-      unset($form_author['auth_add']['authors'][$i]['field_last_name']['#value']);
+      unset($form_author['auth_add']['authors'][$i]['name']['#value']);
       if(count($uids) > 0){
         $account = user_load($uids[$i]);
         $form_author['auth_add']['authors'][$i]['email']['#default_value'] = $account->mail;
-        $form_author['auth_add']['authors'][$i]['field_first_name']['#default_value'] = $account->field_first_name['und'][0]['value'];
-        $form_author['auth_add']['authors'][$i]['field_last_name']['#default_value'] = $account->field_last_name['und'][0]['value'];
-       //$form_author['auth_add']['authors'][$i]['name']['#default_value'] = $account->name;
+        $form_author['auth_add']['authors'][$i]['name']['#default_value'] = $account->name;
 
       }
       if(isset($addme) && $addme == $i && !user_is_anonymous()){
         global $user;
-        $user_fields = user_load($user->uid);
-        $firstname = $user_fields->field_first_name['und']['0']['value'];
-        $lastname = $user_fields->field_last_name['und']['0']['value'];
-        
         $form_author['auth_add']['authors'][$i]['email']['#value'] = $user->mail;
-        $form_author['auth_add']['authors'][$i]['field_first_name']['#value'] = $firstname;
-	$form_author['auth_add']['authors'][$i]['field_last_name']['#value'] = $lastname;
-       //$form_author['auth_add']['authors'][$i]['name']['#value'] = $user->name;
+        $form_author['auth_add']['authors'][$i]['name']['#value'] = $user->name;
 
       }
       if(!user_is_anonymous()){
@@ -199,10 +183,8 @@ function authors_table_form($form, &$form_state, $node) {
   foreach ($uids as $uid){
     $author = user_load($uid);
 
-   // $rows[$uid] = array('name' => $author->name);
-$rows[$uid] = array('name' => $author->field_first_name['und']['0']['value']." ".$author->field_last_name['und']['0']['value']); 
-
- }
+    $rows[$uid] = array('name' => $author->name);
+  }
 
   $header = array('name' => t('Name')
   );
@@ -425,9 +407,51 @@ function reviewer_decision_form($form, &$form_state) {
       )
   );
 
-  if($isEIC){
+ /* if($isEIC){
     $form['decision_letter']['status']['#options']['Reject (Pre-Screening)'] = 'Reject (Pre-Screening)';
+  }*/
+  
+  if($isEIC){
+     $form['decision_letter']['decision_letter'] = array(
+      '#title' => 'Decision Letter',
+      '#description' => 'Please don\'t edit the text enclosed in paranthysis, these will be replaced automatically',
+      '#id' => 'edit-field-decision-letter',
+      '#type' => 'text_format',
+      '#format' => 'filtered_html',
+      //'#prefix' => 'Please Enter Your Review Comments',
+      '#cols' => 40,
+      '#rows' => 20,
+      '#required' => TRUE,
+      '#default_value' => $node->field_decision_letter['und'][0]['value'],
+  );
+
+  $form['decision_letter']['field_decision_letter']['#weight'] = 2;
+  $form['decision_letter']['nd'] = array(
+      '#type' => 'hidden',
+      '#value' => $node -> nid,
+  );
+  
+  $form['decision_letter']['approval'] = $form_node['field_approval'];
+    $form['decision_letter']['subject'] = array(
+        '#title' => 'Email Subject',
+        '#type' => 'textfield',
+        '#default_value' => replace_email_tokens($node->nid, variable_get('revise_decision_subject', REVISE_DEC_LETTER_SUB)),
+        '#required' => TRUE,
+        '#states' => array('visible' => array('select#edit-field-approval-und' => array('value' => 'sendback')))
+        );
+    $form['decision_letter']['email'] = array(
+        '#title' => 'Email to editor',
+        '#type' => 'textarea',
+        '#format' => 1,
+        '#rows' => 5,
+        '#required' => TRUE,
+        '#default_value' => replace_email_tokens($node->nid, variable_get('revise_decision_message', REVISE_DEC_LETTER_MSG)),
+        '#states' => array('visible' => array('select#edit-field-approval-und' => array('value' => 'sendback'))),
+        );
+    $form['#prefix'] = '<div id="eic_decision">';
+	
   }
+  
   if(!$isEIC){
     $form['decision_letter']['status']['#required'] = TRUE;
   }
@@ -577,16 +601,8 @@ function reviewer_invite_form($form, &$form_state) {
       '#type' => 'fieldset',
       '#description' => 'Invite additional reviewers that are not in the system.'
   );
-
-  $form['rev_invite']['invite_firstname'] = array(
-      '#title' => 'First Name',
-      '#type' => 'textfield',
-      '#size' => 'small',
-      '#required' => true
-  );
-   
-    $form['rev_invite']['invite_lastname'] = array(
-      '#title' => 'Last Name',
+  $form['rev_invite']['invite_fname'] = array(
+      '#title' => 'Full Name',
       '#type' => 'textfield',
       '#size' => 'small',
       '#required' => true
@@ -632,9 +648,7 @@ function reviewer_invite_form_validate($form, $form_state) {
   if($error = email_verify_check($form_state['values']['invite_email'])){
     form_set_error('invite_email', $error);
   }
-   $firstname = $form_state['values']['invite_firstname'];
-   $lastname = $form_state['values']['invite_lastname'];
-   $name = $form_state['values']['invite_email'];
+  $name = $form_state['values']['invite_fname'];
 
   $d = db_query("SELECT count(uid) FROM {users} where name = :name or mail = :mail", array(
       ':name' => $name,
@@ -651,15 +665,11 @@ function reviewer_invite_form_validate($form, $form_state) {
  */
 function reviewer_invite_form_submit($form, &$form_state) {
   global $user;
-  if ($form_state['values']['invite_email'] 
-      && $form_state['values']['invite_firstname'] 
-      && $form_state['values']['invite_lastname']) {
+  if ($form_state['values']['invite_fname']
+      && $form_state['values']['invite_email']) {
 
-   
-       $firstname = $form_state['values']['invite_firstname'];
-       $lastname = $form_state['values']['invite_lastname'];
-       $name = $form_state['values']['invite_email'];
-     $account = createUser($form_state['values']['invite_email'], $name, $firstname, $lastname, 1);
+    $name = $form_state['values']['invite_fname'];
+    $account = createUser($form_state['values']['invite_email'], $name, 1);
 
     if ($account) {
       $node = node_load($form_state['values']['invite_nd'], $form_state['values']['invite_vd']);
@@ -1073,6 +1083,23 @@ function review_form($form, &$form_state, $node=null, $user, $type = "") {
 
       );
 
+     $form['fset_review'] ['review_upload'] = array(
+          '#title' => t('Upload the document(optional)'),
+         	'#type' => 'managed_file',
+	//	'#required' => 'TRUE',
+        '#upload_location' => 'private://review_document/',
+		'#default_value' => $review_upload,
+        '#description' => t('Supports only .pdf .doc .docx .zip files'),
+         '#upload_validators' => array(
+        'file_validate_extensions' => array('pdf doc docx zip'),
+	   	 
+      ),
+    );
+	
+
+
+
+
   $form['fset_review']['review_comments'] = array(
       '#title' => '<b>Detailed Comments</b>',
       '#type' => 'text_format',
@@ -1151,6 +1178,8 @@ function update_review($isNew, $form_state, $reviewer){
       'organization' => $form_state['values']['organization'],
       'english' => $form_state['values']['english'],
       'presentation' => $form_state['values']['overall_presentation'],
+      'review_attachment' => $form_state['values']['review_upload'],
+
 
         )) -> execute();
 
@@ -1181,6 +1210,8 @@ function update_review($isNew, $form_state, $reviewer){
                 'organization' => $form_state['values']['organization'],
                 'english' => $form_state['values']['english'],
                 'presentation' => $form_state['values']['overall_presentation'],
+                'review_attachment' => $form_state['values']['review_upload'],
+
 
         )) -> execute();
     }

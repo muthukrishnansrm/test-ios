@@ -463,7 +463,7 @@ function node_form_submit($form, &$form_state) {
 
   if ($insert) {
     watchdog('content', '@type: added %title.', $watchdog_args, WATCHDOG_NOTICE, $node_link);
-    drupal_set_message(t('Thank you for submitting your paper %title to Argument & Computation.', $t_args));
+    drupal_set_message(t('Thank you for submitting your paper  %title to Applied Ontology.', $t_args));
   }
   else {
     watchdog('content', '@type: updated %title.', $watchdog_args, WATCHDOG_NOTICE, $node_link);

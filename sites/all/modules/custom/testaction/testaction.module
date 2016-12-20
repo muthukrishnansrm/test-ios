@@ -1,9 +1,6 @@
 <?php
 require ("testaction_constants.inc");
 
-
-
-
 function emailConfirmationOne($emailIds, $node) {
 	foreach ($emailIds as $email) {
 		$account = user_load_by_mail($email);
@@ -34,19 +31,14 @@ function notifyEicMSG($mtype, $node = null) {
 	drupal_mail('testaction', $mtype, get_eic_emails(), '', $params);
 }
 
-function createUser($emailId, $name = null, $firstname, $lastname, $active = 0, $node = null) {
+function createUser($emailId, $name = null, $active = 0, $node = null) {
 	if (!is_null($name)) {
-	    $edit = array(
-            'field_last_name' => array('und'=>array(0=>array('value'=>$lastname))),
-            'field_first_name' => array('und'=>array(0=>array('value'=>$firstname))),
-            'name' => $name,
-            'mail' => $emailId,
-            'pass' => user_password(5),
-            'status' => 1
-        
-			
+		$edit = array(
+			'name' => $name,
+			'mail' => $emailId,
+			'status' => $active
 		);
-	}else {
+	} else {
 		$edit = array(
 			'name' => $emailId,
 			'mail' => $emailId
@@ -388,7 +380,6 @@ function testaction_mail($key, &$message, $params) {
 	}
 }
 }
-
 function update_actions_table($type, $nid, $vid, $description, $uid, $value) {
 
 	$d = db_insert('swj_actions') -> fields(array(

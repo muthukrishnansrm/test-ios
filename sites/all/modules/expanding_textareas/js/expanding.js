@@ -46,7 +46,10 @@
 
     var containerCSS = {
         position: "relative",
-		paddingBottom:"20px"
+
+        paddingBottom:"30px"
+      //  paddingLeft:"10px",
+      //  paddingTop:"10px"
     };
 
     function resize() {

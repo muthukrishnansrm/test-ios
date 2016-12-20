@@ -223,7 +223,7 @@ function rules_user_action_info() {
       ),
       'email_type' => array(
         'type' => 'text',
-        'label' => t('Email type'),
+        'label' => t('E-mail type'),
         'description' => t("Select the e-mail based on your site's account settings to send to the user."),
         'options list' => 'rules_user_account_email_options_list',
       ),

@@ -117,17 +117,17 @@ function smtp_admin_settings() {
 
   $form['email_options'] = array(
     '#type'  => 'fieldset',
-    '#title' => t('Email options'),
+    '#title' => t('E-mail options'),
   );
   $form['email_options']['smtp_from'] = array(
     '#type'          => 'textfield',
-    '#title'         => t('Email from address'),
+    '#title'         => t('E-mail from address'),
     '#default_value' => variable_get('smtp_from', ''),
     '#description'   => t('The e-mail address that all e-mails will be from.'),
   );
   $form['email_options']['smtp_fromname'] = array(
     '#type'          => 'textfield',
-    '#title'         => t('Email from name'),
+    '#title'         => t('E-mail from name'),
     '#default_value' => variable_get('smtp_fromname', ''),
     '#description'   => t('The name that all e-mails will be from. If left blank will use the site name of:') . ' ' . variable_get('site_name', 'Drupal powered site'),
   );
@@ -155,7 +155,7 @@ function smtp_admin_settings() {
   );
   $form['email_test']['smtp_test_address'] = array(
     '#type'          => 'textfield',
-    '#title'         => t('Email address to send a test e-mail to'),
+    '#title'         => t('E-mail address to send a test e-mail to'),
     '#default_value' => '',
     '#description'   => t('Type in an address to have a test e-mail sent there.'),
   );

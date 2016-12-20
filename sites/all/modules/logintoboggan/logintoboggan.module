@@ -1174,12 +1174,12 @@ function theme_lt_username_title($variables) {
   switch ($variables['form_id']) {
     case 'user_login':
       // Label text for the username field on the /user/login page.
-      return t('Email address');
+      return t('Username or e-mail address');
       break;
 
     case 'user_login_block':
       // Label text for the username field when shown in a block.
-      return t('Email');
+      return t('Username or e-mail');
       break;
   }
 }
@@ -1192,7 +1192,7 @@ function theme_lt_username_description($variables) {
   switch ($variables['form_id']) {
     case 'user_login':
       // The username field's description when shown on the /user/login page.
-      return t('Enter your email address.');
+      return t('You may login with either your assigned username or your e-mail address.');
       break;
     case 'user_login_block':
       return '';
@@ -1217,7 +1217,7 @@ function theme_lt_password_description($variables) {
   switch ($variables['form_id']) {
     case 'user_login':
       // The password field's description on the /user/login page.
-      return t('Enter the password that accompanies your email.');
+      return t('The password field is case sensitive.');
       break;
 
     case 'user_login_block':

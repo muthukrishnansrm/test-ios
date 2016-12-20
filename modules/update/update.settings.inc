@@ -33,7 +33,7 @@ function update_settings($form) {
   $notify_emails = variable_get('update_notify_emails', array());
   $form['update_notify_emails'] = array(
     '#type' => 'textarea',
-    '#title' => t('Email addresses to notify when updates are available'),
+    '#title' => t('E-mail addresses to notify when updates are available'),
     '#rows' => 4,
     '#default_value' => implode("\n", $notify_emails),
     '#description' => t('Whenever your site checks for available updates and finds new releases, it can notify a list of users via e-mail. Put each address on a separate line. If blank, no e-mails will be sent.'),
@@ -41,7 +41,7 @@ function update_settings($form) {
 
   $form['update_notification_threshold'] = array(
     '#type' => 'radios',
-    '#title' => t('Email notification threshold'),
+    '#title' => t('E-mail notification threshold'),
     '#default_value' => variable_get('update_notification_threshold', 'all'),
     '#options' => array(
       'all' => t('All newer versions'),

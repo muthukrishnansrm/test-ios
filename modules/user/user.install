@@ -222,7 +222,7 @@ function user_schema() {
         'length' => 254,
         'not null' => FALSE,
         'default' => '',
-        'description' => 'Email address used for initial account creation.',
+        'description' => 'E-mail address used for initial account creation.',
       ),
       'data' => array(
         'type' => 'blob',
@@ -586,7 +586,7 @@ function user_update_7005(&$sandbox) {
     'length' => 254,
     'not null' => FALSE,
     'default' => '',
-    'description' => 'Email address used for initial account creation.',
+    'description' => 'E-mail address used for initial account creation.',
   );
   db_drop_index('users', 'mail');
   db_change_field('users', 'mail', 'mail', $mail_field, array('indexes' => array('mail' => array('mail'))));

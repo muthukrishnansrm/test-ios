@@ -123,7 +123,7 @@ class ContactSitewideTestCase extends DrupalWebTestCase {
     $this->assertText(t('Your name field is required.'), 'Name required.');
 
     $this->submitContact($this->randomName(16), '', $this->randomName(16), $categories[0], $this->randomName(64));
-    $this->assertText(t('Your e-mail address field is required.'), 'Email required.');
+    $this->assertText(t('Your e-mail address field is required.'), 'E-mail required.');
 
     $this->submitContact($this->randomName(16), $invalid_recipients[0], $this->randomName(16), $categories[0], $this->randomName(64));
     $this->assertText(t('You must enter a valid e-mail address.'), 'Valid e-mail required.');

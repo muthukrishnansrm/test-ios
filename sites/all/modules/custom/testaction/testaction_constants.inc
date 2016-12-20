@@ -1,5 +1,5 @@
 <?php
-$prefix = '[Argument & Computation] ';
+$prefix = '[Applied Ontology] ';
 
 define ( 'EIC_ROLE' , 'EditorInChief' );
 define ( 'EA_ROLE' , 'Assistant Editor' );
@@ -34,32 +34,32 @@ Tracking number: {{tracking_number}}
 define ('AUTHOR_SUBMISSION_SUBJECT', $prefix . 'Your submission to the Semantic Web journal, #{{tracking_number}}');
 define ('AUTHOR_SUBMISSION_MESSAGE', 'Dear {{author}},
 
-Thank you for submitting your paper to Argument-and-computation. It has been assigned tracking number {{tracking_number}}. We will start reviewing within a few days, and you will then be able to obtain the history and current status of your manuscript, by visiting the address presented below.
+Thank you for submitting your paper to Applied Ontology. It has been assigned tracking number {{tracking_number}}. We will start reviewing within a few days, and you will then be able to obtain the history and current status of your manuscript, by visiting the address presented below.
 
 {{direct_url}}
 
 Sincerely,
 
-Argument & Computation Editorial Office
+Applied Ontology Editorial Office
 ');
 
 //Email to newly created user as Author for new submission
 define ('AUTHOR_SUBMISSION_NEW', $prefix . 'Your submission to the Semantic Web journal, #{{tracking_number}}');
 define ('AUTHOR_SUBMISSION_NEW_MSG', 'Dear {{author}},
 
-Thank you for submitting your paper to Argument & Computation. It has been assigned tracking number {{tracking_number}}. We will start reviewing within a few days, and you will then be able to obtain the history and current status of your manuscript, by visiting the address presented below.
+Thank you for submitting your paper to Applied Ontology. It has been assigned tracking number {{tracking_number}}. We will start reviewing within a few days, and you will then be able to obtain the history and current status of your manuscript, by visiting the address presented below.
 
-For future steps in the review process, we have created an account for you on the journal homepage, login: {{login}}. We have sent you a separate email to reset your password. If you already had an account on the Argument & Computation website, please let us know by email to contact@semantic-web-journal.net and we will correct our records.
+For future steps in the review process, we have created an account for you on the journal homepage, login: {{login}}. We have sent you a separate email to reset your password. If you already had an account on the Applied Ontology website, please let us know by email to contact@semantic-web-journal.net and we will correct our records.
 
 You can also directly access the paper by using : {{direct_url}}
 Sincerely,
 
-Argument & Computation Editorial Office
+Applied Ontology Editorial Office
 ');
 
 //Email to EIC notifying new submission
 define ('SUBMISSION_EIC_SUB', $prefix . 'Paper submission');
-define ('SUBMISSION_EIC_MSG', 'A paper has been submitted to the Argument & Computation, which requires processing. Please login and visit the new submissions link.
+define ('SUBMISSION_EIC_MSG', 'A paper has been submitted to the Applied Ontology, which requires processing. Please login and visit the new submissions link.
 
 Paper Details:
 
@@ -69,7 +69,7 @@ Submission Type: {{submission_type}}
 URL: {{url}}
 Tracking number: {{tracking_number}}
 
-Argument & Computation'
+Applied Ontology'
 );
 
 //Email to editors for revising decision letter
@@ -256,7 +256,7 @@ Decision Letter: {{decision_letter}}
 define('REV_DEC_APR_REV_SUB', $prefix . 'Thank you for your support');
 define('REV_DEC_APR_REV_MSG','Dear {{reviewer}},
 
-We have reached a decision regarding paper {{title}} which you helped reviewing. Your input was very valuable for us. You can see all reviews and the decision taken at {{url}}.
+We have reached a decision regarding paper {{title}} which you helped reviewing. Your input was very valuable for us. You can see all reviews and the decision taken at {{direct_url}}.
 
 Authors: {{authors}}
 Title: {{title}}
@@ -320,7 +320,7 @@ define('REV_REMINDER_SUB', $prefix. 'Review Reminder #{{tracking_number}}');
 define('REV_REMINDER_MSG',
 'Dear {{reviewer}},
 
-We would like to remind you of a pending review for the following paper, which was submitted to the Argument & Computation:
+We would like to remind you of a pending review for the following paper, which was submitted to the Applied Ontology:
 
 Authors: {{authors}}
 Title: {{title}}
@@ -352,7 +352,7 @@ and, after having inserted your login and password, you can have a look at your 
 Don’t hesitate to contact us in case you have forgotten your login and/or password or if you need any help with the system.
 
 Best Regards,
-the Editorial Office of Argument & Computation'
+the Editorial Office of Applied Ontology'
 
 );
 

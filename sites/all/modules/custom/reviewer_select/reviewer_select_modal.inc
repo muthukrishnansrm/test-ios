@@ -186,70 +186,6 @@ function decision_modal_callback($js = NULL, $step = NULL) {
 
 }
 
-
-
-/*
-
-Muthu modal decisionwarning callback start
-*/
-
-
-function decisionwarning_modal_callback($js = NULL, $step = NULL) {
-
-  $form_id = 'decision_modal';
-  $params = array('show trail' => FALSE,
-      'show back' => FALSE,
-      'show cancel' => TRUE,
-      'show return' => FALSE,);
-  $path = '/decision/%step';
-  $order = array( // this controls order, as well as form labels
-      'step1' => t('Submit Decision Letter'),
-      'step1' => t('Again'),
-    );
-
-  $forms = array(
-      'step1' => array(
-        'form id' => 'reviewer_decisionwarning_form',
-      ),
-  );
-  $formstate = array();
-  $object_id = 4;
-
-  return warningmessage_callback($js, $step,$form_id, $path, $order, $forms, $object_id, $params, $formstate);
-
-}
-
-
-function warningmessage_callback($js = NULL) {
-  // Content that we place in the popup.
-  $popup_content = t('<b>Dear Editor</b>,</br> <p> This paper does not have a responsible editor yet. To submit a decision letter the paper needs a handling editor and at least one review.</br>
-  Thank you.</p>');
-
-  if (!$js) {
-    return $popup_content;
-  }
-
-  ctools_include('modal');
-  ctools_include('ajax');
-
-  $output = array();
-  $output[] = ctools_modal_command_display(t('Please appoint a responsible editor'), $popup_content);
- // $commands[] = ctools_ajax_command_redirect("$node/ ");
-  //return array('#type' => 'ajax',  '#commands' => $commands);
-  print ajax_render($output);
-  drupal_exit();
-}
-
-/*
-
-Muthu modal decisionwarning callbackend 
-*/
-
-
-
-
-
-
 /**
  * Modal callback to email eics
  */
@@ -810,7 +746,8 @@ function review_select_mform($form, &$form_state, $currentPage = 1, $hideTable =
 //		$count = db_query("SELECT COUNT(u.uid) FROM users u WHERE NOT EXISTS (SELECT p.ruid, p.nid, p.vid FROM paper_reviewer p WHERE u.uid = p.ruid AND p.nid = $nid AND p.vid = $vid) $like AND u.status <> 0") -> fetchField();
 
 		$txt = "";
-
+        $txt_new = 'If the reviewer you are searching for is not included in this list,'.render(ctools_modal_text_button(t('You can Invite a Reviewer(Not Present in the System)'), $base_url.'/swj/nojs/invite/'.$nid, t('Invite a Reviewer not present in the system'),  'ctools-modal-ctools-sample-style'));
+ 
     	if($count == 0){
     	   $txt = 'It appears that the reviewer you are searching for is not present in the system. You can '.render(ctools_modal_text_button(t('Invite a Reviewer (Not Present in the System)'), $base_url.'/swj/nojs/invite/'.$nid, t('Invite a Reviewer not present in the system'),  'ctools-modal-ctools-sample-style'));
     	}
@@ -892,7 +829,8 @@ function review_select_mform($form, &$form_state, $currentPage = 1, $hideTable =
     			'#multiple' => false,
                             //'#required' => true,
     			'#empty' => t('No people available.'),
-    			'#suffix' => render($pager),
+    			//'#suffix' => render($pager),
+				 '#suffix' => '<br /><br />',
     			'#prefix' => '<div id="selected_reviewers_hide">' // used for hiding with js
     		);
 		}else{
@@ -936,7 +874,7 @@ function review_select_mform($form, &$form_state, $currentPage = 1, $hideTable =
 		);
 
 
-
+        $form['fset_review']['acc'] = array('#type' => 'markup', '#markup' => $txt_new);
 		$form['fset_review']['confirm_url'] = array(
 			'#type' => 'hidden',
 			'#value' => url('swj/verify/' . $nid . '/' . $vid . '/', array('absolute' => TRUE))

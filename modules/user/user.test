@@ -160,7 +160,7 @@ class UserRegistrationTestCase extends DrupalWebTestCase {
     $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
     $new_user = reset($accounts);
     $this->assertEqual($new_user->name, $name, 'Username matches.');
-    $this->assertEqual($new_user->mail, $mail, 'Email address matches.');
+    $this->assertEqual($new_user->mail, $mail, 'E-mail address matches.');
     $this->assertEqual($new_user->theme, '', 'Correct theme field.');
     $this->assertEqual($new_user->signature, '', 'Correct signature field.');
     $this->assertTrue(($new_user->created > REQUEST_TIME - 20 ), 'Correct creation time.');
@@ -475,7 +475,7 @@ class UserPasswordResetTestCase extends DrupalWebTestCase {
     $this->drupalLogout();
     // Attempt to reset password.
     $edit = array('name' => $account->name);
-    $this->drupalPost('user/password', $edit, t('Email new password'));
+    $this->drupalPost('user/password', $edit, t('E-mail new password'));
     // Confirm the password reset.
     $this->assertText(t('Further instructions have been sent to your e-mail address.'), 'Password reset instructions mailed message displayed.');
   }
@@ -1902,7 +1902,7 @@ class UserEditTestCase extends DrupalWebTestCase {
     $edit = array();
     $edit['mail'] = $this->randomName() . '@new.example.com';
     $this->drupalPost("user/$user1->uid/edit", $edit, t('Save'));
-    $this->assertRaw(t("Your current password is missing or incorrect; it's required to change the %name.", array('%name' => t('Email address'))));
+    $this->assertRaw(t("Your current password is missing or incorrect; it's required to change the %name.", array('%name' => t('E-mail address'))));
 
     $edit['current_pass'] = $user1->pass_raw;
     $this->drupalPost("user/$user1->uid/edit", $edit, t('Save'));

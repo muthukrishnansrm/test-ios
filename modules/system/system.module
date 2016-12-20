@@ -3220,7 +3220,7 @@ function system_send_email_action_submit($form, $form_state) {
  *   provided.
  * @param array $context
  *   Array with the following elements:
- *   - 'recipient': Email message recipient. This will be passed through
+ *   - 'recipient': E-mail message recipient. This will be passed through
  *     token_replace().
  *   - 'subject': The subject of the message. This will be passed through
  *     token_replace().
